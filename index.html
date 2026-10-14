@@ -31,8 +31,9 @@
     <link rel="canonical" href="https://www.microvpp.com/" />
 
     <!-- Favicons -->
-    <link rel="icon" type="image/png" href="assets/images/microvpp_logo.png" />
-    <link rel="apple-touch-icon" href="assets/images/microvpp_logo.png" />
+    <link rel="icon" type="image/svg+xml" href="assets/images/brand/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/brand/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="assets/images/brand/apple-touch-icon.png" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -194,7 +195,7 @@
             position: fixed;
             top: 0;
             width: 100%;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.97);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
@@ -216,8 +217,12 @@
         }
 
         .logo img {
-            height: 50px;
+            height: 34px;
             width: auto;
+        }
+
+        @media (max-width: 480px) {
+            .logo img { height: 28px; }
         }
 
         .nav-links {
@@ -1878,7 +1883,7 @@
     <header>
         <nav class="container">
             <a href="index.html" class="logo">
-                <img src="assets/images/microvpp_logo_v2.svg" alt="MicroVPP" height="50">
+                <img src="assets/images/microvpp_logo_v3.svg" alt="MicroVPP" height="34">
             </a>
             <ul class="nav-links" id="navLinks">
                 <li><a href="index.html">Home</a></li>
@@ -2453,10 +2458,10 @@
         window.addEventListener('scroll', () => {
             const header = document.querySelector('header');
             if (window.scrollY > 100) {
-                header.style.background = 'rgba(255, 255, 255, 0.9)';
+                header.style.background = 'rgba(243, 244, 246, 0.95)'; // light grey over white sections
                 header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
             } else {
-                header.style.background = 'rgba(255, 255, 255, 0.8)';
+                header.style.background = 'rgba(255, 255, 255, 0.97)'; // near-white over the dark hero
                 header.style.boxShadow = 'none';
             }
         });
