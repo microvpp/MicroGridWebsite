@@ -216,6 +216,15 @@
                 gap: 1.5rem;
             }
         }
+            /* keep a gap between the logo and the menu */
+        nav > .logo { flex-shrink: 0; margin-right: 1.5rem; }
+        nav .cta-button, nav .cta-button-outline { white-space: nowrap; }
+        @media (max-width: 768px) {
+            nav > .logo { margin-right: 0.75rem; }
+        }
+        @media (max-width: 480px) {
+            nav > .logo img { height: 28px; }
+        }
     </style>
 </head>
 <body>

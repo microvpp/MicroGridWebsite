@@ -82,7 +82,7 @@
             position: fixed;
             top: 0;
             width: 100%;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.97);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
@@ -329,8 +329,8 @@
         .footer-logo-icon {
             width: 32px;
             height: 32px;
-            background: var(--brand-green);
-            border-radius: 12px;
+            display: block;
+            object-fit: contain;
             flex-shrink: 0;
         }
 
@@ -449,6 +449,17 @@
                 display: none;
             }
         }
+            /* keep a gap between the logo and the menu */
+        nav > .logo { flex-shrink: 0; margin-right: 1.5rem; }
+        nav .cta-button, nav .cta-button-outline { white-space: nowrap; }
+        @media (max-width: 768px) {
+            nav > .logo { margin-right: 0.75rem; }
+        }
+        @media (max-width: 480px) {
+            nav > .logo img { height: 28px; }
+        }
+        nav .nav-links { gap: 1.25rem; }
+        nav .nav-links a, nav .cta-button, nav .btn { white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -815,7 +826,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <span class="footer-logo-icon"></span>
+                    <img class="footer-logo-icon" src="assets/images/brand/icon-dark.svg" alt="" aria-hidden="true">
                     <div class="footer-logo-text">
                         <div class="footer-logo-title">MicroVPP®</div>
                         <div class="footer-logo-subtitle">by MicroVPP Inc.</div>

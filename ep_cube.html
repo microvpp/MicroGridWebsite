@@ -99,7 +99,7 @@
             position: fixed;
             top: 0;
             width: 100%;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.97);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
@@ -467,6 +467,12 @@
         }
         @media (max-width: 600px) {
             .header-buttons { display: none; }
+        }
+            /* keep a gap between the logo and the menu */
+        nav > .logo { flex-shrink: 0; margin-right: 1.5rem; }
+        nav .cta-button, nav .cta-button-outline { white-space: nowrap; }
+        @media (max-width: 768px) {
+            nav > .logo { margin-right: 0.75rem; }
         }
     </style>
 </head>
