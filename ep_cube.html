@@ -508,9 +508,6 @@
         <div class="container">
             <div class="form-container">
 
-                <!-- Shown when the EP Cube link is missing the device id -->
-                <div class="status-banner status-error" id="linkError" role="alert"></div>
-
                 <ul class="value-lines">
                     <li>Free 24×7 battery optimization — the savings stay with you.</li>
                     <li>A cash reward at season end, based on your battery's measured performance.</li>
@@ -538,6 +535,16 @@
                             <option value="other">Other</option>
                         </select>
                         <div class="field-error" id="utilityError">Please select your utility.</div>
+                    </div>
+
+                    <!-- Only when the EP Cube link has no device_id -->
+                    <div id="serialField" hidden>
+                        <label class="field-label" for="serialInput">EP Cube serial number <span class="req" aria-hidden="true">*</span></label>
+                        <input type="text" id="serialInput" class="text-input"
+                               placeholder="e.g. 10030005200318A460017"
+                               autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                        <p class="field-help">A 21-character code of numbers and one letter. You'll find it on the label on your EP Cube inverter's box, or in your EP Cube manual.</p>
+                        <div class="field-error" id="serialError">Please enter your EP Cube serial number (letters and numbers only).</div>
                     </div>
 
                     <div>
@@ -790,7 +797,8 @@
         //   https://www.microvpp.com/ep_cube/?device_id=2937&utility=sce
         //   (ep_cube/index.html forwards to this page, keeping the query)
         //
-        //   device_id  - required, never shown (EP Cube internal id)
+        //   device_id  - optional, never shown (EP Cube internal id); without
+        //                it the user must type their EP Cube serial number
         //   utility    - optional, pge (PG&E) | sce (SCE) | sdge (SDG&E);
         //                pre-selects the utility dropdown, which the user can
         //                still change
@@ -847,8 +855,10 @@
         const QS_STASH_KEY = 'ep_cube_signup_qs';
 
         // ---------- DOM ----------
-        const linkError     = document.getElementById('linkError');
         const deviceIdInput = document.getElementById('deviceId');
+        const serialField   = document.getElementById('serialField');
+        const serialInput   = document.getElementById('serialInput');
+        const serialError   = document.getElementById('serialError');
         const form          = document.getElementById('signupForm');
         const utilitySelect = document.getElementById('utilitySelect');
         const utilityError  = document.getElementById('utilityError');
@@ -959,21 +969,12 @@
         }
         renderUtilityName();
 
-        // The device id can only come from EP Cube's link: the user cannot
-        // enter it, so without it the enrollment cannot be completed.
-        const missing = [];
-        if (!ctx.device_id) missing.push('device id');
-        if (missing.length) {
-            linkError.classList.add('is-visible');
-            linkError.style.marginTop = '0';
-            linkError.style.marginBottom = '1.5rem';
-            linkError.innerHTML =
-                'This sign-up link is incomplete (missing ' + missing.join(', ') + '). ' +
-                'Please open the link from your EP Cube email again, or contact ' +
-                '<a href="mailto:info@microvpp.com">info@microvpp.com</a>.';
-            submitBtn.disabled = true;
-            stickyCta.hidden = true;
-            track('ep_cube_link_incomplete', missing.join(','));
+        // Without EP Cube's device id, the serial number is how we find the system.
+        const needsSerial = !ctx.device_id;
+        if (needsSerial) {
+            serialField.hidden = false;
+            serialInput.required = true;
+            track('ep_cube_no_device_id');
         }
 
         // ---------- Mobile sticky CTA ----------
@@ -1004,10 +1005,20 @@
             utilityError.classList.remove('is-visible');
             renderUtilityName();
         });
+        serialInput.addEventListener('input', function () {
+            serialInput.classList.remove('invalid');
+            serialError.classList.remove('is-visible');
+        });
         phoneInput.addEventListener('input', function () {
             phoneInput.classList.remove('invalid');
             phoneError.classList.remove('is-visible');
         });
+
+        // Labels are often copied with spaces or dashes; the serial is stored without them.
+        function normalizeSerial(raw) {
+            const s = (raw || '').replace(/[\s-]/g, '').toUpperCase();
+            return /^[A-Z0-9]{6,40}$/.test(s) ? s : '';
+        }
         emailInput.addEventListener('input', function () {
             emailInput.classList.remove('invalid');
             emailError.classList.remove('is-visible');
@@ -1019,6 +1030,11 @@
                 utilitySelect.classList.add('invalid');
                 utilityError.classList.add('is-visible');
                 firstBad = firstBad || utilitySelect;
+            }
+            if (needsSerial && !normalizeSerial(serialInput.value)) {
+                serialInput.classList.add('invalid');
+                serialError.classList.add('is-visible');
+                firstBad = firstBad || serialInput;
             }
             if (phoneInput.value.trim() && !normalizeUsPhone(phoneInput.value)) {
                 phoneInput.classList.add('invalid');
@@ -1052,6 +1068,7 @@
             return {
                 email:   emailInput.value.trim().toLowerCase(),
                 utility: utilitySelect.value,
+                serial:  needsSerial ? normalizeSerial(serialInput.value) : null,
                 name:    name,
                 city:    ctx.city,
                 phone:   normalizeUsPhone(phoneInput.value),
@@ -1069,7 +1086,8 @@
                 location: { city: f.city || null, state: CONFIG.stateCode },
                 system: {
                     brand: CONFIG.inverterManufacturer,
-                    device_id: ctx.device_id
+                    device_id: ctx.device_id || null,
+                    serial_number: f.serial
                 },
                 utility: {
                     leap_utility_id: LEAP_UTILITIES.indexOf(f.utility) >= 0 ? f.utility : null,
@@ -1102,11 +1120,12 @@
                 country: 'US',
                 locale: 'en-US',
                 timezone: CONFIG.timezone,
-                inverter_inverter_id: ctx.device_id,
-                inverter_monitoring_id: ctx.device_id,
+                inverter_inverter_id: ctx.device_id || null,
+                inverter_monitoring_id: ctx.device_id || null,
                 inverter_inverter_type: CONFIG.inverterType,
                 inverter_manufacturer: CONFIG.inverterManufacturer,
-                site_id: ctx.device_id,
+                inverter_serial_number: f.serial,
+                site_id: ctx.device_id || null,
                 site_type: CONFIG.inverterType,
                 info: JSON.stringify(info)
             });
@@ -1156,7 +1175,6 @@
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
             clearStatus();
-            if (missing.length) return;
             if (!validateForm()) {
                 showStatus('error', 'Please fix the highlighted fields to continue.');
                 return;
