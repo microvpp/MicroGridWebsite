@@ -243,28 +243,6 @@
         .step-title { display: block; font-size: 15px; font-weight: 700; color: var(--ink); }
         .step-desc { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; }
 
-        /* Account (from the EP Cube link) */
-        .device-card { background: var(--green-tint); border-color: var(--green-line); }
-        .device-greeting {
-            font-size: 1.05rem; font-weight: 600;
-            color: var(--green-800); margin-bottom: 16px;
-        }
-        .device-card dl {
-            display: grid;
-            grid-template-columns: 130px 1fr;
-            gap: 6px 16px;
-            font-size: 0.95rem;
-        }
-        .device-card dt { color: var(--green-800); font-weight: 600; }
-        .device-card dd { color: var(--ink); word-break: break-word; }
-        .device-card code {
-            font-family: inherit;
-            background: rgba(16, 185, 129, 0.12);
-            padding: 2px 7px; border-radius: 5px;
-            font-size: 0.9rem; color: var(--green-800); font-weight: 600;
-        }
-        .device-card .missing { color: var(--muted); font-style: italic; }
-
         /* Form fields */
         .field-stack { display: grid; gap: 16px; }
         .field-label {
@@ -273,6 +251,7 @@
             color: var(--ink-2); margin-bottom: 6px;
         }
         .field-label .opt { color: #9ca3af; font-weight: 500; }
+        .field-label .req { color: #ef4444; }
         .text-input {
             width: 100%;
             padding: 12px 16px;
@@ -288,6 +267,13 @@
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
         .text-input.invalid { border-color: #ef4444; }
+        select.text-input {
+            appearance: none; -webkit-appearance: none;
+            padding-right: 40px; cursor: pointer;
+            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 16px center;
+        }
+        select.text-input:invalid { color: var(--muted); }
+        select.text-input option { color: var(--ink); }
         .field-help { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
         .field-error {
             display: none;
@@ -424,9 +410,6 @@
             .container { padding: 0 12px; }
             .form-container { padding: var(--space) 20px; border-radius: 12px; }
             .card { padding: 16px 18px; }
-            .device-card dl { grid-template-columns: 1fr; gap: 0; }
-            .device-card dt { margin-top: 8px; }
-            .device-card dt:first-child { margin-top: 0; }
 
             .next-steps ol { grid-template-columns: 1fr; gap: 8px; }
             .next-steps li {
@@ -525,31 +508,13 @@
         <div class="container">
             <div class="form-container">
 
-                <!-- Shown when the EP Cube link is missing email / S/N / device id / utility -->
+                <!-- Shown when the EP Cube link is missing the device id -->
                 <div class="status-banner status-error" id="linkError" role="alert"></div>
 
                 <ul class="value-lines">
                     <li>Free 24×7 battery optimization — the savings stay with you.</li>
                     <li>A cash reward at season end, based on your battery's measured performance.</li>
                 </ul>
-
-                <!-- Account context (all from the EP Cube link, read-only) -->
-                <div class="card device-card">
-                    <p class="device-greeting" id="greeting">Hi there — your EP Cube is ready to join.</p>
-                    <span class="eyebrow">Your EP Cube account</span>
-                    <dl>
-                        <dt>Email</dt>
-                        <dd id="ctxEmail"><span class="missing">Not provided</span></dd>
-                        <dt>Brand</dt>
-                        <dd>EP Cube</dd>
-                        <dt>Serial Number</dt>
-                        <dd id="ctxSerial"><span class="missing">Not provided</span></dd>
-                        <dt>Utility</dt>
-                        <dd id="ctxUtility"><span class="missing">Not provided</span></dd>
-                        <dt>State</dt>
-                        <dd>California</dd>
-                    </dl>
-                </div>
 
                 <div class="next-steps">
                     <span class="eyebrow">What happens next</span>
@@ -563,6 +528,18 @@
                 <input type="hidden" id="deviceId" name="deviceId" />
 
                 <form id="signupForm" novalidate>
+                    <div>
+                        <label class="field-label" for="utilitySelect">Your electric utility <span class="req" aria-hidden="true">*</span></label>
+                        <select id="utilitySelect" class="text-input" required>
+                            <option value="" selected></option>
+                            <option value="pge">PG&amp;E</option>
+                            <option value="sce">SCE</option>
+                            <option value="sdge">SDG&amp;E</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="field-error" id="utilityError">Please select your utility.</div>
+                    </div>
+
                     <div>
                         <span class="eyebrow">A few optional details</span>
                         <div class="field-stack">
@@ -578,14 +555,6 @@
                                        placeholder="(555) 123-4567" autocomplete="tel" inputmode="tel" />
                                 <p class="field-help">Only used for grid event reminders and account support.</p>
                                 <div class="field-error" id="phoneError">Please enter a 10-digit US phone number, or leave it blank.</div>
-                            </div>
-
-                            <div>
-                                <label class="field-label" for="pvSizeInput">Solar (PV) system size in kW <span class="opt">(optional)</span></label>
-                                <input type="number" id="pvSizeInput" class="text-input"
-                                       placeholder="e.g. 7.2" min="0" max="100" step="0.1" inputmode="decimal" />
-                                <p class="field-help">The DC size of your solar panels, usually on your installer contract. Leave blank if you don't have solar or aren't sure.</p>
-                                <div class="field-error" id="pvSizeError">Please enter a size between 0 and 100 kW, or leave it blank.</div>
                             </div>
                         </div>
                     </div>
@@ -754,9 +723,17 @@
                         <strong>By clicking "Agree &amp; Connect My Utility," you:</strong>
                         <ol>
                             <li>accept the <strong>MicroVPP User Agreement</strong>,</li>
-                            <li>sign the <strong>VPP Customer Authorization</strong> and opt in to the <strong>Winter grid-support program</strong>, and</li>
+                            <li>sign the <strong>VPP Customer Authorization</strong> and opt in to the <strong>Winter grid-support program</strong> (this also opts you out of any conflicting grid program), and</li>
                             <li>continue to <strong>Utility authorization</strong> with <span class="utility-name">your utility</span>.</li>
                         </ol>
+                    </div>
+
+                    <div>
+                        <label class="field-label" for="emailInput">Your email address <span class="req" aria-hidden="true">*</span></label>
+                        <input type="email" id="emailInput" class="text-input" required
+                               placeholder="you@example.com" autocomplete="email" inputmode="email" />
+                        <p class="field-help">Enter your email to confirm you agree to both agreements above. It becomes your MicroVPP account email.</p>
+                        <div class="field-error" id="emailError">Please enter a valid email address.</div>
                     </div>
 
                     <div id="submitArea">
@@ -765,7 +742,7 @@
                         </button>
                         <p class="trust-line">Free · Opt out anytime · Data never sold</p>
                         <p class="submit-help">
-                            Clicking the button is your electronic signature on both agreements above.
+                            Your email above and clicking the button are your electronic signature on both agreements.
                         </p>
                     </div>
 
@@ -808,18 +785,22 @@
         // =====================================================================
         // MicroVPP — EP Cube Winter Grid Program sign-up, CA RA enrollment (CAISO)
         //
-        // EP Cube emails each customer a link carrying their identity:
+        // EP Cube emails each customer a link carrying their device:
         //
-        //   https://www.microvpp.com/ep_cube/?email=jane%40example.com
+        //   https://www.microvpp.com/ep_cube/?device_id=2937&utility=sce
         //   (ep_cube/index.html forwards to this page, keeping the query)
-        //     &sn=EPC123456789&device_id=2937&utility=sce
         //
-        //   email      - required, shown read-only
-        //   sn         - required, shown read-only
-        //   device_id  - required, hidden (EP Cube internal id)
-        //   utility    - required, pge | sce | sdge, shown read-only
+        //   device_id  - required, never shown (EP Cube internal id)
+        //   utility    - optional, pge (PG&E) | sce (SCE) | sdge (SDG&E);
+        //                pre-selects the utility dropdown, which the user can
+        //                still change
         //   city       - optional, not shown; stored with the signup
-        //   name, phone - optional pre-fills for the editable fields
+        //   phone      - optional pre-fill for the editable field
+        //
+        // The user confirms their utility and types their email, which signs
+        // the agreements and becomes the account email; both are saved with
+        // the signup. "Other" has no Leap Connect utility, so it stops after
+        // the opt-in.
         //
         // Flow on the single button:
         //   1. POST /auth/signup     create the account + EP Cube inverter
@@ -855,28 +836,28 @@
         };
 
         const UTILITY_LABELS = {
-            pge:  'PG&E',
-            sce:  'Southern California Edison (SCE)',
-            sdge: 'SDG&E'
+            pge:   'PG&E',
+            sce:   'Southern California Edison (SCE)',
+            sdge:  'SDG&E',
+            other: 'Other'
         };
         const UTILITY_SHORT = { pge: 'PG&E', sce: 'SCE', sdge: 'SDG&E' };
+        const LEAP_UTILITIES = ['pge', 'sce', 'sdge'];
         const CTX_STORAGE_KEY = 'ep_cube_signup_ctx';
         const QS_STASH_KEY = 'ep_cube_signup_qs';
 
         // ---------- DOM ----------
         const linkError     = document.getElementById('linkError');
-        const ctxEmailEl    = document.getElementById('ctxEmail');
-        const ctxSerialEl   = document.getElementById('ctxSerial');
-        const ctxUtilityEl  = document.getElementById('ctxUtility');
         const deviceIdInput = document.getElementById('deviceId');
         const form          = document.getElementById('signupForm');
-        const greetingEl    = document.getElementById('greeting');
+        const utilitySelect = document.getElementById('utilitySelect');
+        const utilityError  = document.getElementById('utilityError');
         const otherProgramInput = document.getElementById('otherProgramInput');
         const nameInput     = document.getElementById('nameInput');
         const phoneInput    = document.getElementById('phoneInput');
         const phoneError    = document.getElementById('phoneError');
-        const pvSizeInput   = document.getElementById('pvSizeInput');
-        const pvSizeError   = document.getElementById('pvSizeError');
+        const emailInput    = document.getElementById('emailInput');
+        const emailError    = document.getElementById('emailError');
         const submitBtn     = document.getElementById('submitBtn');
         const stickyCta     = document.getElementById('stickyCta');
         const stickyBtn     = document.getElementById('stickyBtn');
@@ -894,14 +875,9 @@
             });
         }
 
-        // Leap utility ids are lowercase (pge, sce, sdge); accept the common
-        // spellings EP Cube might send (PG&E, SDG&E, SCE, ...).
         function normalizeUtility(raw) {
-            const u = (raw || '').toLowerCase().replace(/[^a-z]/g, '');
-            if (u === 'pge' || u === 'pacificgasandelectric' || u === 'pacificgaselectric') return 'pge';
-            if (u === 'sce' || u === 'southerncaliforniaedison') return 'sce';
-            if (u === 'sdge' || u === 'sandiegogasandelectric' || u === 'sandiegogaselectric') return 'sdge';
-            return '';
+            const u = (raw || '').trim().toLowerCase();
+            return LEAP_UTILITIES.indexOf(u) >= 0 ? u : '';
         }
 
         // Cognito rejects phone numbers that are not E.164, which would fail
@@ -945,15 +921,12 @@
             } catch (_) { /* noop */ }
             const qs = new URLSearchParams(stashed || window.location.search);
             const fromUrl = {
-                email:     (qs.get('email') || '').trim().toLowerCase(),
-                sn:        (qs.get('sn') || qs.get('serial') || qs.get('serial_number') || '').trim(),
                 device_id: (qs.get('device_id') || qs.get('deviceId') || '').trim(),
                 utility:   normalizeUtility(qs.get('utility')),
-                name:      (qs.get('name') || '').trim(),
                 city:      (qs.get('city') || '').trim(),
                 phone:     (qs.get('phone') || '').trim()
             };
-            if (fromUrl.email || fromUrl.sn || fromUrl.device_id) {
+            if (fromUrl.device_id) {
                 try { sessionStorage.setItem(CTX_STORAGE_KEY, JSON.stringify(fromUrl)); } catch (_) { /* noop */ }
                 return fromUrl;
             }
@@ -965,7 +938,7 @@
         }
         const ctx = readContext();
         // Fallback for when the head script could not stash the query; other
-        // params (utm_*, utility) are kept for analytics.
+        // params (utm_*) are kept for analytics.
         try {
             const leftover = new URLSearchParams(window.location.search);
             window.EP_CUBE_PII_KEYS.forEach(function (k) { leftover.delete(k); });
@@ -975,37 +948,21 @@
         } catch (_) { /* noop */ }
 
         // ---------- 2. Hydrate the page ----------
-        if (isValidEmail(ctx.email)) ctxEmailEl.textContent = ctx.email;
-        if (ctx.sn) {
-            ctxSerialEl.innerHTML = '';
-            const code = document.createElement('code');
-            code.textContent = ctx.sn;
-            ctxSerialEl.appendChild(code);
-        }
-        if (UTILITY_LABELS[ctx.utility]) ctxUtilityEl.textContent = UTILITY_LABELS[ctx.utility];
         deviceIdInput.value = ctx.device_id;
-        nameInput.value = ctx.name;
         phoneInput.value = ctx.phone;
-        document.querySelectorAll('.utility-name').forEach(function (el) {
-            el.textContent = UTILITY_SHORT[ctx.utility] || 'your utility';
-        });
+        if (UTILITY_LABELS[ctx.utility]) utilitySelect.value = ctx.utility;
 
-        function renderGreeting() {
-            const name = nameInput.value.trim();
-            const utility = UTILITY_SHORT[ctx.utility];
-            greetingEl.textContent = 'Hi ' + (name || 'there') + ' — your EP Cube' +
-                (utility ? ' on ' + utility : '') + ' is ready to join.';
+        function renderUtilityName() {
+            document.querySelectorAll('.utility-name').forEach(function (el) {
+                el.textContent = UTILITY_SHORT[utilitySelect.value] || 'your utility';
+            });
         }
-        renderGreeting();
-        nameInput.addEventListener('input', renderGreeting);
+        renderUtilityName();
 
-        // These can only come from EP Cube's link: the user cannot edit them,
-        // so without all four the enrollment cannot be completed.
+        // The device id can only come from EP Cube's link: the user cannot
+        // enter it, so without it the enrollment cannot be completed.
         const missing = [];
-        if (!isValidEmail(ctx.email)) missing.push('email');
-        if (!ctx.sn) missing.push('serial number');
         if (!ctx.device_id) missing.push('device id');
-        if (!UTILITY_LABELS[ctx.utility]) missing.push('utility');
         if (missing.length) {
             linkError.classList.add('is-visible');
             linkError.style.marginTop = '0';
@@ -1042,35 +999,36 @@
         }
 
         // ---------- 3. Field validation ----------
+        utilitySelect.addEventListener('change', function () {
+            utilitySelect.classList.remove('invalid');
+            utilityError.classList.remove('is-visible');
+            renderUtilityName();
+        });
         phoneInput.addEventListener('input', function () {
             phoneInput.classList.remove('invalid');
             phoneError.classList.remove('is-visible');
         });
-        pvSizeInput.addEventListener('input', function () {
-            pvSizeInput.classList.remove('invalid');
-            pvSizeError.classList.remove('is-visible');
+        emailInput.addEventListener('input', function () {
+            emailInput.classList.remove('invalid');
+            emailError.classList.remove('is-visible');
         });
-
-        // Blank is allowed; a typed value must be a plausible residential size.
-        function parsePvSizeKw(raw) {
-            const s = (raw || '').trim();
-            if (!s) return { ok: true, value: null };
-            const n = Number(s);
-            if (!isFinite(n) || n <= 0 || n > 100) return { ok: false, value: null };
-            return { ok: true, value: Math.round(n * 100) / 100 };
-        }
 
         function validateForm() {
             let firstBad = null;
+            if (!UTILITY_LABELS[utilitySelect.value]) {
+                utilitySelect.classList.add('invalid');
+                utilityError.classList.add('is-visible');
+                firstBad = firstBad || utilitySelect;
+            }
             if (phoneInput.value.trim() && !normalizeUsPhone(phoneInput.value)) {
                 phoneInput.classList.add('invalid');
                 phoneError.classList.add('is-visible');
                 firstBad = firstBad || phoneInput;
             }
-            if (!parsePvSizeKw(pvSizeInput.value).ok) {
-                pvSizeInput.classList.add('invalid');
-                pvSizeError.classList.add('is-visible');
-                firstBad = firstBad || pvSizeInput;
+            if (!isValidEmail(emailInput.value)) {
+                emailInput.classList.add('invalid');
+                emailError.classList.add('is-visible');
+                firstBad = firstBad || emailInput;
             }
             if (firstBad) firstBad.focus();
             return !firstBad;
@@ -1092,12 +1050,11 @@
         function collectForm() {
             const name = nameInput.value.trim();
             return {
-                email:   ctx.email,
-                utility: ctx.utility,
+                email:   emailInput.value.trim().toLowerCase(),
+                utility: utilitySelect.value,
                 name:    name,
                 city:    ctx.city,
                 phone:   normalizeUsPhone(phoneInput.value),
-                pvSizeKw: parsePvSizeKw(pvSizeInput.value).value,
                 inOtherProgram: otherProgramInput.checked
             };
         }
@@ -1112,11 +1069,14 @@
                 location: { city: f.city || null, state: CONFIG.stateCode },
                 system: {
                     brand: CONFIG.inverterManufacturer,
-                    serial_number: ctx.sn,
-                    device_id: ctx.device_id,
-                    pv_size_kw: f.pvSizeKw
+                    device_id: ctx.device_id
                 },
-                utility: { leap_utility_id: f.utility, name: UTILITY_LABELS[f.utility] },
+                utility: {
+                    leap_utility_id: LEAP_UTILITIES.indexOf(f.utility) >= 0 ? f.utility : null,
+                    name: UTILITY_LABELS[f.utility],
+                    selected: f.utility,
+                    from_ep_cube_link: ctx.utility || null
+                },
                 agreements: {
                     user_agreement_version: CONFIG.userAgreementVersion,
                     vpp_agreement_version: CONFIG.vppAgreementVersion,
@@ -1146,7 +1106,6 @@
                 inverter_monitoring_id: ctx.device_id,
                 inverter_inverter_type: CONFIG.inverterType,
                 inverter_manufacturer: CONFIG.inverterManufacturer,
-                inverter_serial_number: ctx.sn,
                 site_id: ctx.device_id,
                 site_type: CONFIG.inverterType,
                 info: JSON.stringify(info)
@@ -1233,6 +1192,18 @@
             }
 
             accountId = result.body.account_id || accountId;
+            if (LEAP_UTILITIES.indexOf(f.utility) < 0) {
+                try { sessionStorage.removeItem(CTX_STORAGE_KEY); } catch (_) { /* noop */ }
+                showStatus(
+                    'success',
+                    'You\'re opted in! Our team will email <strong>' + escapeHtml(f.email) + '</strong> ' +
+                    'to finish connecting your utility, or contact ' +
+                    '<a href="mailto:info@microvpp.com">info@microvpp.com</a>.'
+                );
+                track('ep_cube_other_utility', f.utility);
+                submitBtn.textContent = 'Opted in';
+                return;
+            }
             const refId = result.body.leap_ref_id;
             if (!refId) {
                 // Without a refId Leap cannot tie the authorized meter back to
