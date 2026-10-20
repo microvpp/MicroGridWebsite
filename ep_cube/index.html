@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
-    <title>EP Cube × MicroVPP Winter Grid Program</title>
+    <title>EP Cube × MicroVPP Grid-Support Program</title>
     <link rel="canonical" href="https://www.microvpp.com/ep_cube.html" />
     <!-- The customer's details are handed to ep_cube.html through sessionStorage
          (same key its head script uses) so they are not requested in a URL again. -->
     <script>
         (function () {
-            var PII_KEYS = ['email', 'sn', 'serial', 'serial_number', 'device_id', 'deviceId', 'name', 'phone', 'city'];
+            var PII_KEYS = ['id', 'email', 'sn', 'serial', 'serial_number', 'device_id', 'deviceId', 'name', 'phone', 'city'];
             var search = window.location.search;
             var qs = new URLSearchParams(search);
             if (PII_KEYS.some(function (k) { return qs.has(k); })) {
