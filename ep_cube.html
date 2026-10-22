@@ -703,7 +703,7 @@
                         <strong>By clicking "Agree &amp; Connect My Utility," you:</strong>
                         <ol>
                             <li>accept the <strong>MicroVPP User Agreement</strong>,</li>
-                            <li>sign the <strong>VPP Customer Authorization</strong> and opt in to the <strong>EP Cube × MicroVPP Grid-Support Program</strong> (this also opts you out of any conflicting grid program),</li>
+                            <li>sign the <strong>MicroVPP Customer Authorization</strong> and opt in to the <strong>EP Cube × MicroVPP Grid-Support Program</strong> (this also opts you out of any conflicting grid program),</li>
                             <li>give the <strong>EP Cube Data-Sharing Authorization</strong>, and</li>
                             <li>continue to <strong>Utility authorization</strong> with <span class="utility-name">your utility</span>.</li>
                         </ol>
@@ -781,7 +781,10 @@
         //   1. POST /admin/ep-cube/enroll  create or find the account for the
         //      id, record the three agreements; returns the Leap refId
         //      (MICROVPP_<AES-SIV(account uuid)>), which can only be minted
-        //      server-side
+        //      server-side. A new account is created through Cognito on a
+        //      placeholder email (no invitation is sent), so its uuid is the
+        //      Cognito sub; the daily file later puts the real email and
+        //      contact details on both the account and the Cognito user
         //   2. Redirect to Leap Connect with utility + refId
         // =====================================================================
 
