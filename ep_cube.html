@@ -788,15 +788,39 @@
         //   2. Redirect to Leap Connect with utility + refId
         // =====================================================================
 
+        // Where the page sends people. On www.microvpp.com: the production API
+        // and production Leap Connect. On localhost (the local loop:
+        // `python3 -m http.server 8765` in this repo, consumer-api on 8001):
+        // the local API and Leap's staging Connect, so a test never creates a
+        // production Leap connection. On any host but production, ?env=<name>
+        // picks an entry. The importer's emailed link follows LEAP_ENV the
+        // same way. A staging site gets its own entry when one exists.
+        const ENVIRONMENTS = {
+            production: { apiBaseUrl: 'https://api.microvpp.com', leapConnectUrl: 'https://connect.leap.energy' },
+            local:      { apiBaseUrl: 'http://localhost:8001',    leapConnectUrl: 'https://connect.staging.leap.energy' }
+        };
+        const PRODUCTION_HOSTS = ['www.microvpp.com', 'microvpp.com'];
+        const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+        function environmentName() {
+            const host = window.location.hostname;
+            if (PRODUCTION_HOSTS.indexOf(host) !== -1) return 'production';
+            const asked = new URLSearchParams(window.location.search).get('env');
+            if (asked && Object.prototype.hasOwnProperty.call(ENVIRONMENTS, asked)) return asked;
+            return LOCAL_HOSTS.indexOf(host) !== -1 ? 'local' : 'production';
+        }
+        const ENV = environmentName();
+        if (ENV !== 'production') console.info('EP Cube sign-up environment: ' + ENV, ENVIRONMENTS[ENV]);
+
         const CONFIG = {
-            apiBaseUrl: 'https://api.microvpp.com',
+            environment: ENV,
+            apiBaseUrl: ENVIRONMENTS[ENV].apiBaseUrl,
             enrollEndpoint: '/admin/ep-cube/enroll',
 
             vppProgramId: 1,
             vppAgreementVersion: 'v3.1',
             userAgreementVersion: 'terms-2025-11-07',
 
-            leapConnectUrl: 'https://connect.leap.energy',
+            leapConnectUrl: ENVIRONMENTS[ENV].leapConnectUrl,
             leapTransmissionRegion: 'CAISO',
             leapVariant: 'RESIDENTIAL',
             leapAccount: 'MicroVPP',
