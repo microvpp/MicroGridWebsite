@@ -793,8 +793,10 @@
         // `python3 -m http.server 8765` in this repo, consumer-api on 8001):
         // the local API and Leap's staging Connect, so a test never creates a
         // production Leap connection. On any host but production, ?env=<name>
-        // picks an entry. The importer's emailed link follows LEAP_ENV the
-        // same way. A staging site gets its own entry when one exists.
+        // picks an entry (host and name match in any case, host with or
+        // without a trailing dot). The importer's emailed link follows
+        // LEAP_ENV the same way. A staging site gets its own entry when one
+        // exists.
         const ENVIRONMENTS = {
             production: { apiBaseUrl: 'https://api.microvpp.com', leapConnectUrl: 'https://connect.leap.energy' },
             local:      { apiBaseUrl: 'http://localhost:8001',    leapConnectUrl: 'https://connect.staging.leap.energy' }
@@ -802,9 +804,9 @@
         const PRODUCTION_HOSTS = ['www.microvpp.com', 'microvpp.com'];
         const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
         function environmentName() {
-            const host = window.location.hostname;
+            const host = window.location.hostname.toLowerCase().replace(/\.$/, '');
             if (PRODUCTION_HOSTS.indexOf(host) !== -1) return 'production';
-            const asked = new URLSearchParams(window.location.search).get('env');
+            const asked = (new URLSearchParams(window.location.search).get('env') || '').toLowerCase();
             if (asked && Object.prototype.hasOwnProperty.call(ENVIRONMENTS, asked)) return asked;
             return LOCAL_HOSTS.indexOf(host) !== -1 ? 'local' : 'production';
         }
