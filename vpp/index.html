@@ -297,6 +297,11 @@
             border: 2px solid #10B981;
             color: #065f46;
         }
+        .status-banner.status-info {
+            background: #eff6ff;
+            border: 2px solid #93c5fd;
+            color: #1e3a8a;
+        }
         .status-banner a { color: inherit; text-decoration: underline; }
 
         /* Benefits strip */
@@ -566,11 +571,15 @@
         //     &inverter_brand=liniotech&state=texas&sn=2517-65170160PH
         //
         // On submit, we POST to the backend admin endpoint ``/admin/vpp/opt-in``
-        // (with ``Authorization: Bearer <access_token>`` only when a token is
-        // present). The backend updates ``consumer.account.vpp_opt_in_status``
-        // and (for Tesla Powerwall) mints a Tesla Fleet API OAuth state +
-        // authorize URL that we redirect the user to. Otherwise we continue to
-        // the utility-details step (utility.html).
+        // (with ``Authorization: Bearer <Cognito ID token>`` only when one is
+        // present; an access token is refused). The backend records a first
+        // opt-in. Without a token the response carries no account id, Leap
+        // reference or Tesla authorize URL, and its status is the same whether
+        // or not anything was recorded, so only a customer who sent their own
+        // token is told they are enrolled; anyone else's opt-in is "submitted".
+        // With the account's own token, Tesla Powerwall gets a Fleet API
+        // authorize URL that we redirect the user to. Every state but
+        // California then continues to the utility-details step (utility.html).
         //
         // Security: we strip ``access_token`` from the URL on first paint so
         // it doesn't sit in the browser address bar or in any subsequent
@@ -581,8 +590,8 @@
         const OPT_IN_ENDPOINT = API_BASE_URL + '/admin/vpp/opt-in';
         const AGREEMENT_VERSION = 'v3.1';
         const DEFAULT_VPP_PROGRAM_ID = 1;
-        // After opting in, continue to the utility-details step (meter / ESIID,
-        // optional utility-bill upload + UtilityAPI authorization email).
+        // After opting in, continue to the utility-details step (meter / ESIID
+        // + UtilityAPI authorization email).
         const UTILITY_STEP_PATH = 'utility.html';
 
         // Friendly labels for the inverter_brand machine keys.
@@ -684,9 +693,13 @@
             submitBtn.textContent = 'Authorize and Continue';
             if (tesla) {
                 submitBtn.classList.add('is-tesla');
-                submitHelp.innerHTML =
-                    '🔐 After you authorize you will be redirected to <strong>auth.tesla.com</strong> to ' +
-                    'authorize MicroGrid via the Tesla Fleet API. We never see your Tesla password.';
+                // Only a signed-in customer's opt-in returns a Tesla authorize
+                // URL; without a token there is no redirect.
+                submitHelp.innerHTML = ctx.access_token
+                    ? '🔐 After you authorize you will be redirected to <strong>auth.tesla.com</strong> to ' +
+                      'authorize MicroGrid via the Tesla Fleet API. We never see your Tesla password.'
+                    : '🔐 You authorize MicroGrid on <strong>auth.tesla.com</strong> (Tesla Fleet API) ' +
+                      'once you are signed in to the MicroVPP app. We never see your Tesla password.';
             } else {
                 submitBtn.classList.remove('is-tesla');
                 submitHelp.innerHTML =
@@ -699,6 +712,29 @@
             statusBanner.className = 'status-banner is-visible status-' + kind;
             statusBanner.innerHTML = message;
             statusBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        // What the customer is told when the opt-in request fails. The API's own
+        // detail stays out of the page: it is written for developers, and a
+        // validation error echoes values from the link.
+        function failureMessage(status) {
+            if (status === 400 || status === 422) {
+                return '⚠️ <strong>This enrollment link looks incomplete or out of date.</strong> ' +
+                       'Please restart from the QR code on your device or the link in your email.';
+            }
+            if (status === 401) {
+                return '⚠️ <strong>Your sign-in has expired.</strong> Sign in to the MicroVPP app ' +
+                       'again and reopen this page from there.';
+            }
+            if (status === 403) {
+                return '⚠️ <strong>This email isn\'t on your MicroVPP account.</strong> Check that ' +
+                       'you\'re signed in to the app with the account you\'re enrolling.';
+            }
+            if (status >= 500) {
+                return '⚠️ <strong>Something went wrong on our side.</strong> Please try again in a ' +
+                       'few minutes.';
+            }
+            return '⚠️ <strong>Enrollment couldn\'t be completed.</strong> Please try again, or ' +
+                   'restart from the QR code on your device.';
         }
         function clearStatus() {
             statusBanner.className = 'status-banner';
@@ -722,8 +758,9 @@
         // ---------- 5. Submit handler ----------
         // Clicking "Authorize and Continue" is the customer's affirmative,
         // click-through acceptance of the authorization, so consent flags are
-        // recorded as true on submit. For Tesla Powerwall, the subsequent
-        // redirect to auth.tesla.com captures the actual Fleet API scope grant.
+        // recorded as true on submit. For a signed-in Tesla Powerwall customer,
+        // the subsequent redirect to auth.tesla.com captures the actual Fleet
+        // API scope grant.
         function buildPayload() {
             return {
                 cognito_user_id:     ctx.cognito_user_id || null,
@@ -773,26 +810,70 @@
             submitBtn.textContent = 'Authorize and Continue';
         }
 
-        function finishEnrollment(body) {
+        // What the response means for this customer. Without a token the API
+        // answers the same whether or not it recorded anything, so only a
+        // customer who sent their own token is told they are enrolled.
+        function outcomeOf(body) {
+            if (body.status === 'NOT_OPTED_IN') return 'not_recorded';
+            if (body.status === 'PENDING_AUTHORIZATION') return 'tesla_pending';
+            if (body.status === 'OPTED_IN') return ctx.access_token ? 'enrolled' : 'submitted';
+            return 'unknown';
+        }
+
+        // Shown under a message the customer needs to read first, instead of
+        // a timed redirect.
+        function offerUtilityStep(body) {
+            const link = document.createElement('a');
+            link.href = utilityStepUrl(body);
+            link.textContent = 'Continue to your utility details →';
+            statusBanner.appendChild(document.createElement('br'));
+            statusBanner.appendChild(link);
+        }
+
+        function finishEnrollment(body, outcome) {
+            const enrolled = outcome === 'enrolled';
             // California customers skip the utility-details step entirely —
             // there's no extra utility info to collect, so we finish here.
             if (ctx.state === 'california') {
                 showStatus(
                     'success',
-                    '🎉 <strong>You\'re enrolled!</strong> Your battery is now part of the ' +
-                    'MicroVPP Grid Support Program. Thanks for supporting your local grid!'
+                    enrolled
+                        ? '🎉 <strong>You\'re enrolled!</strong> Your battery is now part of the ' +
+                          'MicroVPP Grid Support Program. Thanks for supporting your local grid!'
+                        : '✅ <strong>Thanks — your opt-in is submitted.</strong> Thanks for ' +
+                          'supporting your local grid!'
                 );
-                submitBtn.textContent = 'Enrolled';
+                submitBtn.textContent = enrolled ? 'Enrolled' : 'Opt-in submitted';
                 return;
             }
             showStatus(
                 'success',
-                '✅ <strong>You\'re opted in!</strong> One quick last step — let\'s connect ' +
-                'your utility account so we can finish enrollment…'
+                (enrolled ? '✅ <strong>You\'re opted in!</strong>'
+                          : '✅ <strong>Your opt-in is submitted.</strong>') +
+                ' One quick last step — let\'s connect your utility account…'
             );
             setTimeout(function () {
                 window.location.assign(utilityStepUrl(body));
             }, 700);
+        }
+
+        // The Tesla link is unconfirmed: with a token the API found none for
+        // the account; without one the API says nothing about it, and
+        // tesla_connected only says tesla.html got as far as sending us here.
+        function teslaPending(body) {
+            let message;
+            if (ctx.access_token) {
+                // Reached only when tesla.html said connected (otherwise we
+                // redirect to Tesla), so no redirect loop.
+                message = '🔐 <strong>Your opt-in is saved, but we can\'t see your Tesla ' +
+                          'connection yet.</strong> Connect Tesla from the MicroVPP app to finish enrolling.';
+            } else {
+                message = '🔐 <strong>Your opt-in is submitted.</strong> We can\'t confirm your ' +
+                          'Tesla connection here. Sign in to the MicroVPP app to check it and finish enrolling.';
+            }
+            showStatus('info', message);
+            submitBtn.textContent = ctx.access_token ? 'Tesla connection pending' : 'Opt-in submitted';
+            if (ctx.state !== 'california') offerUtilityStep(body);
         }
 
         form.addEventListener('submit', async function (e) {
@@ -829,35 +910,52 @@
             } catch (err) {
                 showStatus(
                     'error',
-                    '⚠️ We couldn\'t reach the enrollment service. Please check your ' +
-                    'connection and try again.'
+                    '⚠️ <strong>We couldn\'t reach the enrollment service.</strong> Please check ' +
+                    'your connection and try again in a few minutes.'
                 );
                 resetSubmit();
                 return;
             }
 
             if (!result.ok) {
-                const d = result.body && (result.body.detail || result.body.message);
-                const msg = typeof d === 'string' ? d
-                          : (d ? JSON.stringify(d) : ('HTTP ' + result.status));
-                showStatus('error', '⚠️ Enrollment couldn\'t be completed: ' + msg);
+                showStatus('error', failureMessage(result.status));
                 resetSubmit();
                 return;
             }
 
             const body = result.body || {};
+            const outcome = outcomeOf(body);
+            if (outcome === 'unknown') {
+                showStatus('error', '⚠️ We couldn\'t confirm your opt-in. Please try again.');
+                resetSubmit();
+                return;
+            }
 
             // Tesla Powerwall: if the backend says Fleet authorization is still
             // required (Tesla not linked yet) and Tesla wasn't already connected
             // upstream by tesla.html, hand off to Tesla's authorize page.
-            if (body.requires_tesla_fleet_auth && body.tesla_auth_url && !ctx.tesla_connected) {
+            if (outcome === 'tesla_pending' && body.requires_tesla_fleet_auth &&
+                    body.tesla_auth_url && !ctx.tesla_connected) {
                 showStatus('info', '🔐 Redirecting you to Tesla to authorize Fleet API access…');
                 submitBtn.textContent = 'Redirecting to Tesla…';
                 setTimeout(function () { window.location.assign(body.tesla_auth_url); }, 400);
                 return;
             }
-
-            finishEnrollment(body);
+            if (outcome === 'not_recorded') {
+                // VPP_OPT_IN_RECORD_WITHOUT_TOKEN is off: nothing was recorded.
+                showStatus(
+                    'info',
+                    '⚠️ <strong>Your opt-in wasn\'t recorded.</strong> Opt-ins from this link ' +
+                    'are paused. Sign in to the MicroVPP app to enroll.'
+                );
+                submitBtn.textContent = 'Not recorded';
+                return;
+            }
+            if (outcome === 'tesla_pending') {
+                teslaPending(body);
+                return;
+            }
+            finishEnrollment(body, outcome);
         });
     </script>
 
