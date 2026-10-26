@@ -374,6 +374,16 @@
         .status-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
         .status-success { background: var(--green-tint); border: 1px solid var(--green-line); color: var(--green-800); }
 
+        /* Test-page banner: shown on every host but production */
+        .env-banner {
+            margin: -1rem 0 0.75rem;
+            padding: 6px 16px;
+            background: #fef3c7; border-bottom: 1px solid #f59e0b; color: #78350f;
+            font-size: 0.82rem; font-weight: 600; text-align: center;
+            overflow-wrap: anywhere;
+        }
+        .env-banner-unconfigured { background: #fef2f2; border-bottom-color: #f87171; color: #991b1b; }
+
         /* Mobile sticky CTA */
         .sticky-cta { display: none; }
 
@@ -788,15 +798,17 @@
         //   2. Redirect to Leap Connect with utility + refId
         // =====================================================================
 
-        // Where the page sends people. On www.microvpp.com: the production API
-        // and production Leap Connect. On localhost (the local loop:
+        // Where the page sends people. On www.microvpp.com and microvpp.com: the
+        // production API and production Leap Connect. On localhost, 127.0.0.1
+        // and [::1] (the local loop:
         // `python3 -m http.server 8765` in this repo, consumer-api on 8001):
         // the local API and Leap's staging Connect, so a test never creates a
-        // production Leap connection. On any host but production, ?env=<name>
-        // picks an entry (host and name match in any case, host with or
-        // without a trailing dot). The importer's emailed link follows
-        // LEAP_ENV the same way. A staging site gets its own entry when one
-        // exists.
+        // production Leap connection. Production is reached only from a
+        // production host: ?env=<name> picks a test entry on any other host
+        // and never production, and any other host without one submits
+        // nothing (host and name match in any case, host with or without a
+        // trailing dot). The importer's emailed link follows LEAP_ENV the
+        // same way. A staging site gets its own entry when one exists.
         const ENVIRONMENTS = {
             production: { apiBaseUrl: 'https://api.microvpp.com', leapConnectUrl: 'https://connect.leap.energy' },
             local:      { apiBaseUrl: 'http://localhost:8001',    leapConnectUrl: 'https://connect.staging.leap.energy' }
@@ -807,22 +819,24 @@
             const host = window.location.hostname.toLowerCase().replace(/\.$/, '');
             if (PRODUCTION_HOSTS.indexOf(host) !== -1) return 'production';
             const asked = (new URLSearchParams(window.location.search).get('env') || '').toLowerCase();
-            if (asked && Object.prototype.hasOwnProperty.call(ENVIRONMENTS, asked)) return asked;
-            return LOCAL_HOSTS.indexOf(host) !== -1 ? 'local' : 'production';
+            if (asked !== 'production' && Object.prototype.hasOwnProperty.call(ENVIRONMENTS, asked)) return asked;
+            return LOCAL_HOSTS.indexOf(host) !== -1 ? 'local' : null;
         }
         const ENV = environmentName();
-        if (ENV !== 'production') console.info('EP Cube sign-up environment: ' + ENV, ENVIRONMENTS[ENV]);
+        const PAGE_HOST = window.location.hostname;
+        const ENV_HOSTS = ENV ? ENVIRONMENTS[ENV] : { apiBaseUrl: null, leapConnectUrl: null };
+        if (ENV !== 'production') console.info('EP Cube sign-up environment: ' + (ENV || 'none for ' + PAGE_HOST), ENV_HOSTS);
 
         const CONFIG = {
             environment: ENV,
-            apiBaseUrl: ENVIRONMENTS[ENV].apiBaseUrl,
+            apiBaseUrl: ENV_HOSTS.apiBaseUrl,
             enrollEndpoint: '/admin/ep-cube/enroll',
 
             vppProgramId: 1,
             vppAgreementVersion: 'v3.1',
             userAgreementVersion: 'terms-2025-11-07',
 
-            leapConnectUrl: ENVIRONMENTS[ENV].leapConnectUrl,
+            leapConnectUrl: ENV_HOSTS.leapConnectUrl,
             leapTransmissionRegion: 'CAISO',
             leapVariant: 'RESIDENTIAL',
             leapAccount: 'MicroVPP',
@@ -948,7 +962,42 @@
             }).observe(document.getElementById('submitArea'));
         }
 
-        if (!ctx.id) {
+        // ---------- Test pages ----------
+        // Every host but production says so at the top of the page and names
+        // where a submit goes; an unconfigured host submits nothing.
+        if (ENV !== 'production') {
+            const header = document.querySelector('header');
+            const envBanner = document.createElement('div');
+            envBanner.className = 'env-banner' + (ENV ? '' : ' env-banner-unconfigured');
+            envBanner.setAttribute('role', 'note');
+            envBanner.textContent = ENV
+                ? 'Test page (' + ENV + '): API ' + ENV_HOSTS.apiBaseUrl + ' · Leap Connect ' + ENV_HOSTS.leapConnectUrl
+                : 'This page is not configured for ' + PAGE_HOST + ': nothing will be submitted.';
+            header.insertBefore(envBanner, header.firstChild);
+            // The header is fixed, so the page moves down by the banner's height.
+            const fitBanner = function () {
+                document.body.style.paddingTop = envBanner.getBoundingClientRect().height + 'px';
+            };
+            fitBanner();
+            window.addEventListener('resize', fitBanner);
+            window.addEventListener('load', fitBanner);
+            if (document.fonts) document.fonts.ready.then(fitBanner);
+        }
+
+        if (!ENV) {
+            submitBtn.disabled = true;
+            statusBanner.className = 'status-banner is-visible status-error';
+            // Text nodes, so the host never reaches innerHTML.
+            const contact = document.createElement('a');
+            contact.href = 'mailto:info@microvpp.com';
+            contact.textContent = 'info@microvpp.com';
+            statusBanner.replaceChildren(
+                'This sign-up page is not configured for ' + PAGE_HOST + ', so it cannot submit. ' +
+                'Please open the personal link from your EP Cube email, or contact ',
+                contact, '.'
+            );
+            track('ep_cube_unconfigured_host');
+        } else if (!ctx.id) {
             submitBtn.disabled = true;
             statusBanner.className = 'status-banner is-visible status-error';
             statusBanner.innerHTML =
@@ -1018,8 +1067,8 @@
         // ---------- 5. The one button ----------
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            if (!ENV || !ctx.id) return;
             clearStatus();
-            if (!ctx.id) return;
             if (!validateForm()) {
                 showStatus('error', 'Please select your utility to continue.');
                 return;
