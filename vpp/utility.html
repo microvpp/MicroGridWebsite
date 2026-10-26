@@ -154,27 +154,6 @@
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
 
-        /* Upload dropzone */
-        .dropzone {
-            border: 2px dashed #d1d5db; border-radius: 12px;
-            padding: 1.5rem; text-align: center; cursor: pointer;
-            transition: border-color 0.2s ease, background 0.2s ease;
-            background: #fafafa;
-        }
-        .dropzone:hover, .dropzone.is-dragover { border-color: #10B981; background: #f0fdf4; }
-        .dropzone .dz-icon { font-size: 1.6rem; }
-        .dropzone .dz-main { font-weight: 600; color: #374151; margin-top: 0.3rem; }
-        .dropzone .dz-sub { font-size: 0.82rem; color: #6b7280; margin-top: 0.15rem; }
-        .dz-file {
-            display: none; align-items: center; justify-content: space-between;
-            gap: 0.75rem; margin-top: 0.75rem;
-            background: #f0fdf4; border: 1.5px solid #10B981;
-            border-radius: 10px; padding: 0.7rem 0.95rem;
-        }
-        .dz-file.is-visible { display: flex; }
-        .dz-file .dz-name { font-size: 0.9rem; color: #065f46; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dz-file .dz-remove { background: none; border: none; color: #059669; font-weight: 600; cursor: pointer; text-decoration: underline; font-size: 0.85rem; flex-shrink: 0; }
-
         /* Buttons */
         .submit-btn {
             background: linear-gradient(135deg, #059669 0%, #047857 100%);
@@ -319,19 +298,9 @@
                             <p class="field-help">Your Electric Service Identifier — a 17–22 digit number on your Texas bill. Required to enroll with your REP.</p>
                         </div>
 
-                        <!-- Bill upload -->
+                        <!-- Bill upload needs the account's own sign-in, which this page does not have. -->
                         <div class="form-group">
-                            <label class="field-label">Or upload your most recent utility bill</label>
-                            <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload utility bill">
-                                <div class="dz-icon">📄</div>
-                                <div class="dz-main">Tap to upload, or drag &amp; drop</div>
-                                <div class="dz-sub">PDF, JPG, or PNG — we'll read your meter number/ESIID for you.</div>
-                            </div>
-                            <input type="file" id="billInput" accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf" style="display:none;">
-                            <div class="dz-file" id="dzFile">
-                                <span class="dz-name" id="dzFileName"></span>
-                                <button type="button" class="dz-remove" id="dzRemove">Remove</button>
-                            </div>
+                            <p class="field-help" id="billUploadNote">📄 Uploading a utility bill needs a signed-in MicroVPP account, so it isn't available here. Enter your meter number above, or upload your bill later once you're signed in.</p>
                         </div>
 
                         <button type="submit" class="submit-btn" id="finishBtn">Finish registration</button>
@@ -401,7 +370,9 @@
         //   - Utility company (CA) or REP (TX)
         //   - Meter number
         //   - ESIID (Texas only) — needed to enroll with the REP
-        //   - The most recent utility bill (we extract the IDs from it)
+        //
+        // It does not take a utility bill: uploading one needs the account's
+        // own ID token, and this page is reached without one.
         //
         // On finish (or skip) we also trigger a UtilityAPI authorization email
         // so the customer can grant utility-data access later. That email is the
@@ -413,14 +384,12 @@
             apiBaseUrl: 'https://api.microvpp.com',
             // Best-effort endpoints — calls degrade gracefully if unavailable.
             utilityDetailsEndpoint: '/admin/vpp/utility-details',
-            uploadBillsEndpoint:    '/admin/upload-utility-bills',
             utilityApiAuthEndpoint: '/admin/utilityapi/request-authorization'
         };
 
         // ---------- DOM ----------
         const workView      = document.getElementById('workView');
         const doneView      = document.getElementById('doneView');
-        const doneMessage   = document.getElementById('doneMessage');
         const ctxEmailEl    = document.getElementById('ctxEmail');
         const ctxStateEl    = document.getElementById('ctxState');
         const form          = document.getElementById('utilityForm');
@@ -428,16 +397,9 @@
         const meterInput    = document.getElementById('meterNumber');
         const esiidGroup    = document.getElementById('esiidGroup');
         const esiidInput    = document.getElementById('esiid');
-        const dropzone      = document.getElementById('dropzone');
-        const billInput     = document.getElementById('billInput');
-        const dzFile        = document.getElementById('dzFile');
-        const dzFileName    = document.getElementById('dzFileName');
-        const dzRemove      = document.getElementById('dzRemove');
         const finishBtn     = document.getElementById('finishBtn');
         const skipBtn       = document.getElementById('skipBtn');
         const statusBanner  = document.getElementById('statusBanner');
-
-        let selectedFile = null;
 
         // ---------- Params ----------
         function normalizeState(raw) {
@@ -507,55 +469,7 @@
             statusBanner.innerHTML = '';
         }
 
-        // ---------- Bill upload UI ----------
-        function setFile(file) {
-            selectedFile = file || null;
-            if (selectedFile) {
-                dzFileName.textContent = selectedFile.name;
-                dzFile.classList.add('is-visible');
-            } else {
-                dzFile.classList.remove('is-visible');
-                billInput.value = '';
-            }
-        }
-        dropzone.addEventListener('click', function () { billInput.click(); });
-        dropzone.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); billInput.click(); }
-        });
-        billInput.addEventListener('change', function () {
-            setFile(billInput.files && billInput.files[0]);
-        });
-        dzRemove.addEventListener('click', function () { setFile(null); });
-        ['dragenter', 'dragover'].forEach(function (ev) {
-            dropzone.addEventListener(ev, function (e) {
-                e.preventDefault(); dropzone.classList.add('is-dragover');
-            });
-        });
-        ['dragleave', 'drop'].forEach(function (ev) {
-            dropzone.addEventListener(ev, function (e) {
-                e.preventDefault(); dropzone.classList.remove('is-dragover');
-            });
-        });
-        dropzone.addEventListener('drop', function (e) {
-            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-                setFile(e.dataTransfer.files[0]);
-            }
-        });
-
         // ---------- Best-effort API calls ----------
-        async function uploadBill(file) {
-            if (!file || !ctx.account_id) return { ok: false, skipped: true };
-            try {
-                const fd = new FormData();
-                fd.append('account_id', ctx.account_id);
-                fd.append('files', file, file.name);
-                const resp = await fetch(CONFIG.apiBaseUrl + CONFIG.uploadBillsEndpoint, {
-                    method: 'POST', body: fd
-                });
-                return { ok: resp.ok };
-            } catch (_) { return { ok: false }; }
-        }
-
         async function postUtilityDetails(details) {
             try {
                 const resp = await fetch(CONFIG.apiBaseUrl + CONFIG.utilityDetailsEndpoint, {
@@ -593,17 +507,13 @@
                 utility_company: utilitySelect.value || null,
                 meter_number:   (meterInput.value || '').trim() || null,
                 esiid:          isTexas ? ((esiidInput.value || '').trim() || null) : null,
-                bill_uploaded:  !!selectedFile,
                 source:         'vpp-utility-web'
             };
         }
 
-        function showDone(submitted) {
+        function showDone() {
             workView.style.display = 'none';
             doneView.classList.add('is-visible');
-            doneMessage.textContent = submitted
-                ? 'Thanks! We\'ve received your utility details and your battery is enrolled in the MicroVPP Grid Support Program.'
-                : 'No problem — your battery is enrolled in the MicroVPP Grid Support Program.';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -635,13 +545,12 @@
             }
 
             if (submitted) {
-                if (selectedFile) await uploadBill(selectedFile);
                 await postUtilityDetails(buildDetails());
             }
             // Always send the UtilityAPI authorization email (the safety net).
             await requestUtilityApiAuthorization();
 
-            showDone(submitted);
+            showDone();
         }
 
         form.addEventListener('submit', function (e) {
