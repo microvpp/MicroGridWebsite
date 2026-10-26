@@ -17,11 +17,15 @@
   calls SESSION_RESOLVE_URL to swap sid for session/account_id (see script below).
 
   consumer-api (SolCube): set window.SUBSCRIBE_API_BASE to API origin (no trailing slash).
-  Flow: resolve ``sid`` → ``/admin/subscribe/session/resolve``; Agree → Payment Element;
-  ``POST /admin/subscribe/payment/prepare`` then ``Pay`` → ``stripe.confirmPayment``;
+  Flow: resolve ``sid`` → ``/admin/subscribe/session/resolve`` returns ``account_id`` and a signed
+  ``session_token`` (also set as an httpOnly cookie); Agree → Payment Element;
+  ``POST /admin/subscribe/payment/prepare`` with the ``X-Subscribe-Session`` header (prepare acts only
+  for the session's account) then ``Pay`` → ``stripe.confirmPayment``;
   ``POST /admin/subscribe/payment/complete`` updates DB (Stripe customer id, card last4, exp, SUBSCRIBED).
   Env: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_ANNUAL,
-  SUBSCRIBE_SID_SECRET (+ mint key if using mint). Local dev: window.SUBSCRIBE_ALLOW_NO_ACCOUNT + SUBSCRIBE_DEV_ACCOUNT_ID.
+  SUBSCRIBE_SID_SECRET (+ mint key if using mint). Local dev: mint a sid against the local API and open
+  ``?sid=...``; window.SUBSCRIBE_ALLOW_NO_ACCOUNT + SUBSCRIBE_DEV_ACCOUNT_ID skip resolve, so prepare
+  refuses them (no session).
 -->
 <head>
     <!-- Google Tag Manager -->
@@ -505,8 +509,19 @@
 
             var subscribeContext = {
                 accountId: null,
+                sessionToken: null,
                 cognitoAccessToken: null
             };
+
+            // The session is sent only to prepare (complete does not read it) and is
+            // kept in memory only, never in storage.
+            function prepareHeaders() {
+                var h = { 'Content-Type': 'application/json' };
+                if (subscribeContext.sessionToken) {
+                    h['X-Subscribe-Session'] = subscribeContext.sessionToken;
+                }
+                return h;
+            }
 
             var errEl = document.getElementById('err');
             function showError(msg) {
@@ -658,6 +673,9 @@
                         if (x.j.account_id) {
                             subscribeContext.accountId = x.j.account_id;
                         }
+                        if (x.j.session_token) {
+                            subscribeContext.sessionToken = x.j.session_token;
+                        }
                     })
                     .catch(function (e) {
                         console.warn('[subscribe]', e);
@@ -728,7 +746,7 @@
 
                 var res = await fetch(PAY_PREPARE_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: prepareHeaders(),
                     credentials: 'include',
                     body: JSON.stringify({
                         account_id: aid,
