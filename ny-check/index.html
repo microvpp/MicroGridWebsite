@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://geocoding.geo.census.gov; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="color-scheme" content="light">
-<title>Free Home Battery Check</title>
-<meta name="description" content="Check whether your home can get a free battery through the WNY Affordable Home Energy Program for Working Families.">
+<title>Home Battery Program Check</title>
+<meta name="description" content="Check whether your home can participate at no cost in the WNY Affordable Home Energy Program for Working Families.">
 <style>
   :root {
     --accent: #1d5c47;
@@ -144,8 +144,8 @@
   </header>
 
   <main>
-    <h1>Can my home get a free battery?</h1>
-    <p class="lede">The <b>WNY Affordable Home Energy Program for Working Families</b> puts a home battery in your home at no cost to you. New York State pays an incentive toward it; MicroVPP pays the rest. Enter your address to see if your home qualifies. We check the state&rsquo;s Disadvantaged Community map and, if needed, the state&rsquo;s income limits. Nothing is stored or sent to us.</p>
+    <h1>Can my home participate at no cost?</h1>
+    <p class="lede">The <b>WNY Affordable Home Energy Program for Working Families</b> lets eligible families participate at no cost. We install a home battery that cuts your monthly electric bill by 30&ndash;50%* and supports your local grid when it is under stress. New York State pays an incentive toward it; MicroVPP pays the rest. Enter your address to see if your home qualifies. We check the state&rsquo;s Disadvantaged Community map and, if needed, the state&rsquo;s income limits. Nothing is stored or sent to us.</p>
 
     <form id="check-form" novalidate aria-label="Check your address">
       <div class="field">
@@ -201,7 +201,7 @@
   </main>
 
   <footer class="site">
-    <p>This is information, not an application or an offer. Eligibility rules and income limits are NYSERDA&rsquo;s; savings are estimates and depend on your usage. Sources: NYSERDA Residential &amp; Retail Energy Storage Program Manual; NYSERDA MWh Block Dashboard (read <span id="funds-as-of">2026-10-30</span>); NYS Climate Justice Working Group DAC designation; NYSERDA 2026 EmPower+ income guidelines; US Census Geocoder.</p>
+    <p>*Actual savings may vary. This is information, not an application or an offer. Eligibility rules and income limits are NYSERDA&rsquo;s; savings are estimates and depend on your usage and rate. Sources: NYSERDA Residential &amp; Retail Energy Storage Program Manual; NYSERDA MWh Block Dashboard (read <span id="funds-as-of">2026-10-30</span>); NYS Climate Justice Working Group DAC designation; NYSERDA 2026 EmPower+ income guidelines; US Census Geocoder.</p>
     <p>&copy; MicroVPP Inc.</p>
   </footer>
 </div>
@@ -421,7 +421,7 @@
     } else if (cap === null) {
       notes.push('We could not find NYSERDA income limits for this county.');
     } else if (input.income === null) {
-      notes.push('If your household income is below ' + capText + ' and you own and live in the home, you may qualify for the free program. Add your income above to check.');
+      notes.push('If your household income is below ' + capText + ' and you own and live in the home, you may qualify to participate at no cost. Add your income above to check.');
     } else {
       notes.push('Your income is at or above the limit of ' + capText + '.');
     }
@@ -493,25 +493,27 @@
         'Call National Grid once to choose the time-of-use rate, which is what makes the savings possible. We\u2019ll tell you exactly what to ask for.'
       ]);
       html = '<div class="card isi"><p class="eyebrow">' + esc(decision.basis) + '</p>' +
-        '<h2 tabindex="-1">Good news: your home looks eligible for a free battery</h2>' +
+        '<h2 tabindex="-1">Good news: your home looks eligible to participate at no cost</h2>' +
         '<h3>Why</h3><p class="why">' + esc(decision.why) + '</p>' +
         (decision.incomePath ? '' : '<p class="verify">Income doesn&rsquo;t matter on this path. The program is for families who own and live in their home and get their electricity from National Grid.</p>') +
         matchedHtml(place) + areaNote + utilityNote +
         '<h3>What you get</h3>' + listHtml([
           'A home battery installed at no cost to you',
           'No monthly fee, no loan, no credit check',
-          'For most families, savings of one to two thousand dollars a year on the electric bill',
+          'Cut your monthly electric bill by 30\u201350%*',
+          'Support your local grid when it is under stress',
           'Repairs on us for ten years; stop any time and we take the battery away'
         ]) +
+        '<p class="hint">*Actual savings may vary.</p>' +
         '<h3>What you do</h3>' + listHtml(steps) +
         '<h3>Why now</h3>' + fundHtml(BLOCKS.isi) +
-        '<p class="hint">The state incentive comes from a fixed pot, first come, first served across New York. When it runs out, the free program ends with it.</p>' +
+        '<p class="hint">The state incentive comes from a fixed pot, first come, first served across New York. When it runs out, the no-cost program ends with it.</p>' +
         '<p class="hint">Already have solar panels with net metering? Then this program probably isn&rsquo;t for you; a battery wouldn&rsquo;t cut your bill much.</p>';
     } else {
-      html = '<div class="card"><p class="eyebrow">Not eligible for the free program</p>' +
-        '<h2 tabindex="-1">Your home doesn&rsquo;t qualify for the free battery</h2>' +
+      html = '<div class="card"><p class="eyebrow">Not eligible to participate at no cost</p>' +
+        '<h2 tabindex="-1">Your home doesn&rsquo;t qualify to participate at no cost</h2>' +
         '<h3>Why</h3>' + notesHtml(decision.notes) + matchedHtml(place) + utilityNote +
-        '<p class="next">A battery could still get New York&rsquo;s standard incentive (' + usd(BLOCKS.ros.rate) + ' per kWh in National Grid territory), but it would not be free. If you&rsquo;d like to talk about that, contact us.</p>';
+        '<p class="next">A battery could still get New York&rsquo;s standard incentive (' + usd(BLOCKS.ros.rate) + ' per kWh in National Grid territory), but there would be a cost to you. If you&rsquo;d like to talk about that, contact us.</p>';
     }
     return html + '<h3>Next step</h3>' + CONTACT_HTML + '</div>';
   }
