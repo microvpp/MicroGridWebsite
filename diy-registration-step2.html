@@ -904,7 +904,7 @@
 
                     <div class="form-group full-width">
                         <label for="fullName">Full Name or Preferred Name</label>
-                        <input type="text" id="fullName" name="fullName" placeholder="Enter your full name or preferred name (optional)">
+                        <input type="text" id="fullName" name="fullName" maxlength="100" placeholder="Enter your full name or preferred name (optional)">
                     </div>
 
                     <!-- Contact fields shown for California (original flow).
@@ -921,13 +921,13 @@
 
                         <div class="form-group full-width">
                             <label for="address">Address</label>
-                            <input type="text" id="address" name="address" placeholder="Street address (optional)">
+                            <input type="text" id="address" name="address" maxlength="200" placeholder="Street address (optional)">
                         </div>
 
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="city">City</label>
-                                <input type="text" id="city" name="city" placeholder="City (optional)">
+                                <input type="text" id="city" name="city" maxlength="100" placeholder="City (optional)">
                                 <small style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem; display: block;">Helps us match local energy rates.</small>
                             </div>
                             <div class="form-group">
@@ -1501,6 +1501,8 @@
         const API_BASE_URL = 'https://api.microvpp.com';
         const SIGNUP_ENDPOINT = '/auth/signup';
         const UPDATE_PROFILE_ENDPOINT = '/auth/update-profile-web';
+        // The API refuses an info longer than this many characters (Cognito's custom:info limit).
+        const INFO_MAX_CHARS = 2048;
         
         // Format phone number to E.164 format (California flow only)
         function formatPhoneToE164(phone) {
@@ -1583,26 +1585,53 @@
             }
         }
 
+        // info.electricity_bills from the usage values saved in registrationStep1.
+        // Step 3 builds it the same way.
+        function buildElectricityBills(step1Data) {
+            let filesInfo = [];
+            try {
+                const storedFiles = sessionStorage.getItem('registrationFiles');
+                if (storedFiles) {
+                    const filesData = JSON.parse(storedFiles);
+                    // Handle both old and new format
+                    if (filesData.uploaded && Array.isArray(filesData.files)) {
+                        filesInfo = filesData.files;
+                    } else if (Array.isArray(filesData)) {
+                        filesInfo = filesData;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load files data:', e);
+            }
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            const toMonthArray = (dict) => dict
+                ? monthNames.map(m => {
+                    const v = dict[`month${m}`];
+                    return (v !== undefined && v !== null && v !== '') ? parseFloat(v) : null;
+                })
+                : null;
+            const dailyAvgStr = (val) => (val !== undefined && val !== null && String(val).trim() !== '')
+                ? parseFloat(val) : null;
+            return {
+                uploaded_count: filesInfo.length,
+                files: filesInfo,
+                bill_type: step1Data.billType || 'no_solar',
+                monthly_kwh_provided: step1Data.monthlyKwh && Object.keys(step1Data.monthlyKwh).length > 0,
+                monthly_kwh: toMonthArray(step1Data.monthlyKwh),
+                monthly_net_kwh: toMonthArray(step1Data.monthlyNetKwh),
+                monthly_export_kwh: toMonthArray(step1Data.monthlyExportKwh),
+                daily_average_kwh_provided: !!dailyAvgStr(step1Data.dailyAverageKwh),
+                daily_average_kwh: dailyAvgStr(step1Data.dailyAverageKwh),
+                daily_average_net_kwh: dailyAvgStr(step1Data.dailyAverageNetKwh),
+                daily_average_export_kwh: dailyAvgStr(step1Data.dailyAverageExportKwh),
+                estimated_solar_kwh_per_day_per_kw: step1Data.estimatedSolarKwhPerDayPerKw || null
+            };
+        }
+
         // Sign up new user (using Step 1 and Step 2 data)
         async function signupUser(step2Data, step1Data) {
             try {
-                // Get files data from session storage (uploaded in step 1)
-                let filesInfo = [];
-                try {
-                    const storedFiles = sessionStorage.getItem('registrationFiles');
-                    if (storedFiles) {
-                        const filesData = JSON.parse(storedFiles);
-                        // Handle both old and new format
-                        if (filesData.uploaded && Array.isArray(filesData.files)) {
-                            filesInfo = filesData.files;
-                        } else if (Array.isArray(filesData)) {
-                            filesInfo = filesData;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Could not load files data:', e);
-                }
-                
                 // Get or generate device ID for tracking
                 const deviceId = getDeviceId();
 
@@ -1651,32 +1680,7 @@
                         platform: navigator.platform,
                         language: navigator.language
                     },
-                    electricity_bills: (() => {
-                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                           'July', 'August', 'September', 'October', 'November', 'December'];
-                        const toMonthArray = (dict) => dict
-                            ? monthNames.map(m => {
-                                const v = dict[`month${m}`];
-                                return (v !== undefined && v !== null && v !== '') ? parseFloat(v) : null;
-                            })
-                            : null;
-                        const dailyAvgStr = (val) => (val !== undefined && val !== null && String(val).trim() !== '')
-                            ? parseFloat(val) : null;
-                        return {
-                            uploaded_count: filesInfo.length,
-                            files: filesInfo,
-                            bill_type: step1Data.billType || 'no_solar',
-                            monthly_kwh_provided: step1Data.monthlyKwh && Object.keys(step1Data.monthlyKwh).length > 0,
-                            monthly_kwh: toMonthArray(step1Data.monthlyKwh),
-                            monthly_net_kwh: toMonthArray(step1Data.monthlyNetKwh),
-                            monthly_export_kwh: toMonthArray(step1Data.monthlyExportKwh),
-                            daily_average_kwh_provided: !!dailyAvgStr(step1Data.dailyAverageKwh),
-                            daily_average_kwh: dailyAvgStr(step1Data.dailyAverageKwh),
-                            daily_average_net_kwh: dailyAvgStr(step1Data.dailyAverageNetKwh),
-                            daily_average_export_kwh: dailyAvgStr(step1Data.dailyAverageExportKwh),
-                            estimated_solar_kwh_per_day_per_kw: step1Data.estimatedSolarKwhPerDayPerKw || null
-                        };
-                    })(),
+                    electricity_bills: buildElectricityBills(step1Data),
                     step1_inputs: {
                         battery_capacity: step1Data.batteryCapacity || null,
                         pv_wattage: step1Data.pvWattage || null,
@@ -1938,45 +1942,17 @@
             });
         });
 
-        // Update existing user profile (Step 2 - when returning from later steps)
-        async function updateProfileStep1(step2Data, filesData, step1Data) {
+        // Save this page's answers on an account that already exists: one nem3
+        // created, or one this page created before the user came back to it.
+        // The API replaces each top-level info key it is sent (and Cognito
+        // replaces the whole info), so every key sent carries all of it. device
+        // and step1_inputs are not changed on this page and are left out, so the
+        // stored ones stay. No email: a different address is an email change,
+        // which the API refuses without the user's ID token.
+        async function updateExistingAccount(userId, step2Data, step1Data) {
             try {
-                const userId = sessionStorage.getItem('registrationUserId');
-                if (!userId) {
-                    throw new Error('No user_id found for profile update.');
-                }
-                
-                // Convert uploaded files data to info format - handle null/undefined
-                const fileInfo = Array.isArray(filesData) ? filesData.map(file => ({
-                    name: file.name,
-                    size: file.size,
-                    type: file.type
-                })) : [];
-                
-                // Get or generate device ID for tracking
-                const deviceId = getDeviceId();
-
-                // Email is captured in Step 1 — read it from sessionStorage.
                 const userEmail = getStoredEmail();
-                const email = userEmail || generateDummyEmail();
-
-                console.log('Email for profile update (from Step 1):', userEmail ? userEmail : `(using dummy: ${email})`);
-
-                // Build the info object combining Step 1 (system setup) and Step 2 (contact info)
                 const info = {
-                    contact: {
-                        name: step2Data.fullName || null,
-                        email: userEmail,
-                        phone: step2Data.phone || null,
-                        email_provided: !!userEmail,
-                        email_source: userEmail ? 'step1_modal' : 'dummy_generated'
-                    },
-                    device: {
-                        device_id: deviceId,
-                        user_agent: navigator.userAgent,
-                        platform: navigator.platform,
-                        language: navigator.language
-                    },
                     location: {
                         address: step2Data.address || null,
                         city: step2Data.city || null,
@@ -1985,93 +1961,58 @@
                     system: {
                         battery_capacity_kwh: step1Data.batteryCapacity ? parseFloat(step1Data.batteryCapacity) : null,
                         pv_wattage_kw: step1Data.pvWattage ? parseFloat(step1Data.pvWattage) : null,
-                        installation_date: step2Data.installationDate || null,
                         utility_company: step2Data.utilityCompany || null,
                         esiid: step2Data.esiid || null,
                         meter_id: step2Data.meterId || null,
-                        data_authorization_requested: !!step2Data.dataAuthorizationRequested,
-                        serial_number: step2Data.serialNumber || null
+                        data_authorization_requested: !!step2Data.dataAuthorizationRequested
                     },
                     registration: {
-                        mode: (step2Data.username && step2Data.password) ? 'direct_connection' : 'simulation',
-                        status: 'step2_updated',
-                        vpp_participation: step2Data.vppParticipation || false,
-                        marketing_consent: step2Data.marketing || false,
-                        terms_accepted: step2Data.termsAccepted || false,
+                        mode: 'simulation',
+                        status: 'step2_completed',
                         registration_date: new Date().toISOString(),
                         registration_source: 'diy-web-form-step2',
-                        temp_user_id: step1Data.tempUserId || null
-                    },
-                    electricity_bills: (() => {
-                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                           'July', 'August', 'September', 'October', 'November', 'December'];
-                        const toMonthArray = (dict) => dict
-                            ? monthNames.map(m => {
-                                const v = dict[`month${m}`];
-                                return (v !== undefined && v !== null && v !== '') ? parseFloat(v) : null;
-                            })
-                            : null;
-                        const dailyAvgStr = (val) => (val !== undefined && val !== null && String(val).trim() !== '')
-                            ? parseFloat(val) : null;
-                        return {
-                            uploaded_count: fileInfo.length,
-                            files: fileInfo,
-                            bill_type: step1Data.billType || 'no_solar',
-                            monthly_kwh_provided: step1Data.monthlyKwh && Object.keys(step1Data.monthlyKwh).length > 0,
-                            monthly_kwh: toMonthArray(step1Data.monthlyKwh),
-                            monthly_net_kwh: toMonthArray(step1Data.monthlyNetKwh),
-                            monthly_export_kwh: toMonthArray(step1Data.monthlyExportKwh),
-                            daily_average_kwh_provided: !!dailyAvgStr(step1Data.dailyAverageKwh),
-                            daily_average_kwh: dailyAvgStr(step1Data.dailyAverageKwh),
-                            daily_average_net_kwh: dailyAvgStr(step1Data.dailyAverageNetKwh),
-                            daily_average_export_kwh: dailyAvgStr(step1Data.dailyAverageExportKwh),
-                            estimated_solar_kwh_per_day_per_kw: step1Data.estimatedSolarKwhPerDayPerKw || null
-                        };
-                    })(),
-                    step1_inputs: {
-                        battery_capacity: step1Data.batteryCapacity || null,
-                        pv_wattage: step1Data.pvWattage || null,
-                        monthly_kwh: step1Data.monthlyKwh || null,
-                        daily_average_kwh: step1Data.dailyAverageKwh || null,
                         temp_user_id: step1Data.tempUserId || null,
-                        bill_type: step1Data.billType || 'no_solar',
-                        monthly_net_kwh: step1Data.monthlyNetKwh || null,
-                        monthly_export_kwh: step1Data.monthlyExportKwh || null,
-                        daily_average_net_kwh: step1Data.dailyAverageNetKwh || null,
-                        daily_average_export_kwh: step1Data.dailyAverageExportKwh || null
+                        terms_accepted: step2Data.termsAccepted || false,
+                        terms_accepted_date: step2Data.termsAccepted ? new Date().toISOString() : null
                     },
-                    notes: step2Data.additionalNotes || null
+                    electricity_bills: buildElectricityBills(step1Data)
                 };
+                // contact holds the email, so it is sent only when the email is known;
+                // an account nem3 created keeps nem3 as the email's source.
+                if (userEmail) {
+                    info.contact = {
+                        name: step2Data.fullName || null,
+                        email: userEmail,
+                        phone: step2Data.phone || null,
+                        email_provided: true,
+                        email_source: step1Data.registrationSource === 'nem3-landing-page' ? 'nem3_landing' : 'step1_modal'
+                    };
+                }
 
-                // Inverter brand + credentials are now collected in Step 3,
-                // so leave those fields null on the Step 2 profile update.
                 const payload = {
                     account_id: userId,
                     username: step2Data.fullName || null,
-                    email: email,
+                    email: null,
                     phone_number: formatPhoneToE164(step2Data.phone),
                     full_address: step2Data.address || null,
                     city: step2Data.city || null,
                     state: step2Data.state || null,
-                    zip: null,
-                    timezone: null,
-                    locale: "en-US",
-                    inverter_inverter_type: "hybrid_inverter",
-                    inverter_manufacturer: null,
-                    inverter_serial_number: null,
-                    inverter_monitoring_id: null,
-                    inverter_monitoring_token: null,
-                    inverter_monitoring_api_url: null,
-                    inverter_api_key: null,
-                    inverter_api_secret: null,
-                    info: JSON.stringify(info),
-                    site_id: null,
-                    site_type: "residential",
-                    installation_date: null,
+                    info: JSON.stringify(info)
                 };
-                
-                console.log('Updating profile (Step 2) for user_id:', userId, payload);
-                
+
+                // The API refuses an info over the limit on every submit, so say so here
+                // instead. The name, address and city are capped; the ESI ID, the meter
+                // number and values restored from an earlier session are not. The API
+                // counts characters (code points), not UTF-16 units.
+                if (Array.from(payload.info).length > INFO_MAX_CHARS) {
+                    return {
+                        success: false,
+                        error: 'Some of the details on this page are too long to save. Please shorten them and submit again.'
+                    };
+                }
+
+                console.log('Updating the existing account (Step 2) for user_id:', userId);
+
                 const response = await fetch(API_BASE_URL + UPDATE_PROFILE_ENDPOINT, {
                     method: 'POST',
                     headers: {
@@ -2080,21 +2021,21 @@
                     },
                     body: JSON.stringify(payload)
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => null);
-                    throw new Error(
-                        errorData?.detail || 
-                        `Profile update failed with status: ${response.status}`
-                    );
+                    console.error('Updating the existing account (Step 2) failed with status:', response.status);
+                    return {
+                        success: false,
+                        status: response.status,
+                        error: errorData?.detail || `Profile update failed with status: ${response.status}`
+                    };
                 }
-                
+
                 const result = await response.json();
-                console.log('Profile updated successfully (Step 2):', result);
-                
                 return { success: true, result };
             } catch (error) {
-                console.error('Error updating profile (Step 2):', error);
+                console.error('Error updating the existing account (Step 2):', error);
                 return { success: false, error: error.message };
             }
         }
@@ -2489,6 +2430,10 @@
             }
             if (hasDailyExport) {
                 step1Data.dailyAverageExportKwh = dailyExportRaw;
+            } else if (hasDailyKwh) {
+                // Usage typed with the export left blank: an export saved on an earlier
+                // submit no longer applies.
+                step1Data.dailyAverageExportKwh = '';
             }
             if (hasDailyKwh || hasDailyExport) {
                 step1Data.billType = step2Data.billType;
@@ -2518,7 +2463,8 @@
                 submitBtn.textContent = 'Run custom report and continue ...';
             }
 
-            // Check if user already exists (returning from step 3)
+            // An account already exists when nem3 created it or the user came back
+            // to this page; its answers are saved to that account.
             const existingUserId = sessionStorage.getItem('registrationUserId');
 
             if (!existingUserId) {
@@ -2541,7 +2487,50 @@
                     console.log('Signup successful!');
                 }
             } else {
-                console.log('User already exists (ID: ' + existingUserId + '), skipping signup');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving your details...';
+
+                const updateResult = await updateExistingAccount(existingUserId, step2Data, step1Data);
+
+                if (!updateResult.success && updateResult.status === 404) {
+                    // The stored account no longer exists, so the next submit signs up.
+                    sessionStorage.removeItem('registrationUserId');
+                    alert(
+                        '⚠️ We Could Not Find Your Account\n\n' +
+                        'Please submit again to create it.'
+                    );
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Run custom report and continue ...';
+                    return;
+                }
+
+                if (!updateResult.success && updateResult.status === 401) {
+                    // The account has a password now, so only its signed-in owner can
+                    // change it and a resubmit cannot help. The popup's report promise
+                    // and Step 3's save would not hold for it either, so the user goes
+                    // to the home page.
+                    alert(
+                        '⚠️ Your Account Is Already Set Up\n\n' +
+                        'Your account already has a password, so the details on this page could not be saved here. ' +
+                        'Please contact support@microvpp.com to update them.'
+                    );
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                if (!updateResult.success) {
+                    // A server or network error can pass on a retry, and Step 3 does not
+                    // resend these details, so the user stays here and submits again.
+                    alert(
+                        '⚠️ Could Not Save Your Details\n\n' +
+                        'We could not save the details on this page to your account:\n' +
+                        updateResult.error + '\n\n' +
+                        'Please submit again. If this persists, please contact support@microvpp.com.'
+                    );
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Run custom report and continue ...';
+                    return;
+                }
             }
 
             // Celebrate completion and invite the user to add inverter info
