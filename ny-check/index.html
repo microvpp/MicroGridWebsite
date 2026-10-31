@@ -144,14 +144,16 @@
   </header>
 
   <main>
+    <p class="eyebrow">WNY Affordable Home Energy Program for Working Families</p>
     <h1>Can my home participate at no cost?</h1>
-    <p class="lede">The <b>WNY Affordable Home Energy Program for Working Families</b> lets eligible families participate at no cost. We install a home battery that cuts your monthly electric bill by 30&ndash;50%* and supports your local grid when it is under stress. New York State pays an incentive toward it; MicroVPP pays the rest. Enter your address to see if your home qualifies. We check the state&rsquo;s Disadvantaged Community map and, if needed, the state&rsquo;s income limits. Nothing is stored or sent to us.</p>
+    <p class="lede">A home battery that cuts your monthly electric bill by 30&ndash;50%* and supports your local grid when it is under stress.</p>
+    <p class="lede">Enter your address to see if you qualify. Nothing is stored.</p>
 
     <form id="check-form" novalidate aria-label="Check your address">
       <div class="field">
         <label for="address">Street address, city and ZIP</label>
         <input id="address" name="address" type="text" autocomplete="street-address" placeholder="123 Main St, Buffalo, NY 14201" aria-describedby="address-hint address-error">
-        <span class="hint" id="address-hint">Used only to look up your census tract with the US Census Geocoder.</span>
+        <span class="hint" id="address-hint">Used only to look up your neighborhood.</span>
         <div class="error-text" id="address-error" hidden></div>
       </div>
 
@@ -201,7 +203,7 @@
   </main>
 
   <footer class="site">
-    <p>*Actual savings may vary. This is information, not an application or an offer. Eligibility rules and income limits are NYSERDA&rsquo;s; savings are estimates and depend on your usage and rate. Sources: NYSERDA Residential &amp; Retail Energy Storage Program Manual; NYSERDA MWh Block Dashboard (read <span id="funds-as-of">2026-10-30</span>); NYS Climate Justice Working Group DAC designation; NYSERDA 2026 EmPower+ income guidelines; US Census Geocoder.</p>
+    <p>*Actual savings may vary. Information only, not an application or an offer. Eligibility rules and income limits are NYSERDA&rsquo;s (data as of <span id="funds-as-of">2026-10-30</span>).</p>
     <p>&copy; MicroVPP Inc.</p>
   </footer>
 </div>
@@ -384,7 +386,7 @@
   // Step 1 result for a DAC tract: ISI by address. No income questions are asked.
   function decideByAddress(place) {
     return { kind: 'isi', basis: 'Qualifies by address',
-      why: 'Your census tract ' + place.tract + ' is a state-designated Disadvantaged Community.', extra: [] };
+      why: 'Your neighborhood is a state-designated Disadvantaged Community.', extra: [] };
   }
 
   // Step 2 result for an address that is not DAC (place.dac === false) or could not be checked (null).
@@ -411,7 +413,7 @@
 
     // Standard tier. Explain why the $450 tier did not apply.
     var notes = [];
-    if (place.dac === false) notes.push('Your census tract ' + place.tract + ' is not a designated Disadvantaged Community.');
+    if (place.dac === false) notes.push('Your neighborhood is not a designated Disadvantaged Community.');
     else notes.push('We did not check your address against the Disadvantaged Community map. If your home is in a Disadvantaged Community, it may qualify by address; enter it above to check.');
 
     if (incomeBelow && !input.owner) {
@@ -467,12 +469,11 @@
 
   function matchedHtml(place) {
     if (!place.matchedAddress) return '<p class="matched">County chosen: ' + esc(place.county) + ' County. Address not checked.</p>';
-    return '<p class="matched">Matched address: ' + esc(place.matchedAddress) + ' &middot; ' + esc(place.county) +
-      ' County &middot; census tract ' + esc(place.tract) + '</p>';
+    return '<p class="matched">' + esc(place.matchedAddress) + '</p>';
   }
 
   var PROGRAM_COUNTIES = ['Niagara', 'Erie'];
-  var CONTACT_HTML = '<p class="next">Questions, or ready to talk? Email <b>support@microvpp.com</b> or call <b>(716) 218-0299</b>. We&rsquo;ll look at your home with you and run the savings numbers before you decide.</p>';
+  var CONTACT_HTML = '<p class="next">Email <b>support@microvpp.com</b> or call <b>(716) 218-0299</b>.</p>';
   var currentUtility = '';
 
   function listHtml(items) {
@@ -486,36 +487,33 @@
     var utilityNote = '';
     if (decision.kind === 'isi') {
       var steps = decision.incomePath ?
-        ['Confirm your income with NYSERDA, the state agency, not with us: a short online form with recent pay stubs or last year\u2019s tax return. If your family gets HEAP or SNAP, the approval letter is all you need. We\u2019ll send you the link and help you fill it in.'] : [];
+        ['Confirm your income with NYSERDA (pay stubs, a tax return, or a HEAP/SNAP letter). We\u2019ll help.'] : [];
       steps = steps.concat([
-        'Let us look at your home once, to pick the spot for the battery',
+        'One home visit to pick the spot',
         'Be home on installation day',
-        'Call National Grid once to choose the time-of-use rate, which is what makes the savings possible. We\u2019ll tell you exactly what to ask for.'
+        'One call to National Grid to switch to the time-of-use rate (we\u2019ll tell you what to say)'
       ]);
       html = '<div class="card isi"><p class="eyebrow">' + esc(decision.basis) + '</p>' +
         '<h2 tabindex="-1">Good news: your home looks eligible to participate at no cost</h2>' +
         '<h3>Why</h3><p class="why">' + esc(decision.why) + '</p>' +
-        (decision.incomePath ? '' : '<p class="verify">Income doesn&rsquo;t matter on this path. The program is for families who own and live in their home and get their electricity from National Grid.</p>') +
+        '<p class="verify">For families who own and live in their home and get electricity from National Grid.</p>' +
         matchedHtml(place) + areaNote + utilityNote +
         '<h3>What you get</h3>' + listHtml([
-          'A home battery installed at no cost to you',
-          'No monthly fee, no loan, no credit check',
+          'No cost: no fees, no loan, no credit check',
           'Cut your monthly electric bill by 30\u201350%*',
           'Support your local grid when it is under stress',
-          'Repairs on us for ten years; stop any time and we take the battery away'
+          'We maintain it for ten years; stop any time'
         ]) +
         '<p class="hint">*Actual savings may vary.</p>' +
         '<h3>What you do</h3>' + listHtml(steps) +
-        '<h3>Why now</h3>' + fundHtml(BLOCKS.isi) +
-        '<p class="hint">The state incentive comes from a fixed pot, first come, first served across New York. When it runs out, the no-cost program ends with it.</p>' +
-        '<p class="hint">Already have solar panels with net metering? Then this program probably isn&rsquo;t for you; a battery wouldn&rsquo;t cut your bill much.</p>';
+        '<h3>Why now</h3><p class="next">State funding is limited and first come, first served.</p>';
     } else {
       html = '<div class="card"><p class="eyebrow">Not eligible to participate at no cost</p>' +
         '<h2 tabindex="-1">Your home doesn&rsquo;t qualify to participate at no cost</h2>' +
         '<h3>Why</h3>' + notesHtml(decision.notes) + matchedHtml(place) + utilityNote +
-        '<p class="next">A battery could still get New York&rsquo;s standard incentive (' + usd(BLOCKS.ros.rate) + ' per kWh in National Grid territory), but there would be a cost to you. If you&rsquo;d like to talk about that, contact us.</p>';
+        '<p class="next">A battery could still get New York&rsquo;s standard incentive, but there would be a cost to you.</p>';
     }
-    return html + '<h3>Next step</h3>' + CONTACT_HTML + '</div>';
+    return html + '<h3>Questions?</h3>' + CONTACT_HTML + '</div>';
   }
 
   function notesHtml(notes) {
