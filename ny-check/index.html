@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://geocoding.geo.census.gov; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light">
+<title>Free Home Battery Check</title>
+<meta name="description" content="Check whether your home can get a free battery through the WNY Affordable Home Energy Program for Working Families.">
+<style>
+  :root {
+    --accent: #1d5c47;
+    --accent-dark: #154534;
+    --accent-soft: #e8f1ed;
+    --ink: #1a1f1d;
+    --muted: #56615c;
+    --line: #d9e0dc;
+    --bg: #f5f7f6;
+    --card: #ffffff;
+    --warn: #7a4300;
+    --warn-soft: #fdf4e7;
+    --warn-line: #ecd3ae;
+    --error: #a3261b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 38rem; margin: 0 auto; padding: 0 16px; }
+  header.site { padding: 20px 0 8px; }
+  .logo { display: block; height: 30px; width: auto; }
+  h1 { font-size: clamp(1.55rem, 5.2vw, 2.05rem); line-height: 1.2; margin: 28px 0 10px; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 28px; }
+
+  form { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 16px; }
+  @media (min-width: 560px) { form { padding: 28px; } }
+  .field { margin: 0 0 20px; }
+  .field > label, .legend { display: block; font-weight: 600; margin-bottom: 6px; }
+  .hint { display: block; color: var(--muted); font-size: .9rem; margin-top: 6px; }
+  input[type=text], input[type=number], select {
+    width: 100%; font: inherit; font-size: 1rem; color: var(--ink);
+    padding: 11px 12px; min-height: 46px;
+    border: 1px solid #b9c4be; border-radius: 8px; background: #fff;
+  }
+  input[type=number] { -moz-appearance: textfield; }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input:focus, select:focus, button:focus-visible, .check input:focus-visible {
+    outline: 3px solid rgba(29, 92, 71, .35); outline-offset: 1px; border-color: var(--accent);
+  }
+  .row { display: grid; gap: 0 16px; }
+  @media (min-width: 560px) { .row { grid-template-columns: 1fr 1.6fr; } }
+  .check { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 14px; cursor: pointer; }
+  .check input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+  .error-text { color: var(--error); font-size: .92rem; margin-top: 6px; }
+  [aria-invalid=true] { border-color: var(--error); }
+  .fallback { background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: 8px; padding: 14px; }
+  button {
+    width: 100%; min-height: 50px; margin-top: 8px;
+    font: inherit; font-weight: 600; font-size: 1.05rem;
+    color: #fff; background: var(--accent); border: 0; border-radius: 8px; cursor: pointer;
+  }
+  button:hover { background: var(--accent-dark); }
+  button[disabled] { opacity: .7; cursor: progress; }
+  @media (min-width: 560px) { button { width: auto; padding: 0 36px; } }
+  .privacy { color: var(--muted); font-size: .85rem; margin: 14px 0 0; }
+
+  #result { margin: 24px 0 0; }
+  #result:empty { display: none; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 16px; border-top: 6px solid var(--muted); }
+  @media (min-width: 560px) { .card { padding: 28px; } }
+  .card.isi { border-top-color: var(--accent); }
+  .card.notice { border-top-color: #c98a2b; }
+  .card.problem { border-top-color: var(--error); }
+  .card h2 { font-size: 1.5rem; line-height: 1.25; margin: 2px 0 6px; outline: none; }
+  .eyebrow { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0; }
+  .card.isi .eyebrow { color: var(--accent); }
+  .figures { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 16px 0 4px; }
+  .figure .num { display: block; font-size: 1.9rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .figure .cap { display: block; color: var(--muted); font-size: .88rem; }
+  .card h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 24px 0 8px; }
+  .why { margin: 0; font-size: 1.05rem; }
+  .card.isi .why { background: var(--accent-soft); padding: 12px 14px; border-radius: 8px; }
+  .notes { margin: 10px 0 0; padding-left: 20px; color: var(--ink); }
+  .notes li { margin: 4px 0; }
+  .matched { color: var(--muted); font-size: .9rem; margin: 10px 0 0; overflow-wrap: anywhere; }
+  .checklist { list-style: none; margin: 0; padding: 0; }
+  .checklist li { position: relative; padding: 6px 0 6px 28px; border-bottom: 1px solid #edf0ee; }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist li::before {
+    content: ""; position: absolute; left: 6px; top: 11px; width: 6px; height: 12px;
+    border: solid var(--accent); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+  }
+  .fund { margin: 0 0 12px; }
+  .fund p { margin: 0 0 6px; }
+  .bar { height: 6px; background: #e3e8e5; border-radius: 3px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); }
+  .alt { width: 100%; border-collapse: collapse; margin: 14px 0 4px; font-variant-numeric: tabular-nums; }
+  .alt th, .alt td { text-align: left; padding: 8px 6px 8px 0; border-bottom: 1px solid #edf0ee; vertical-align: top; }
+  .alt th { font-size: .85rem; color: var(--muted); font-weight: 600; }
+  .next { margin: 0; }
+
+  .verify { margin: 10px 0 0; font-size: .95rem; }
+  #income-form { margin-top: 16px; }
+  .step-title { font-size: 1.2rem; line-height: 1.3; margin: 0 0 16px; }
+  #income-result { margin: 24px 0 0; }
+  #income-result:empty { display: none; }
+
+  footer.site { color: var(--muted); font-size: .85rem; padding: 32px 0 40px; }
+  footer.site p { margin: 0 0 10px; }
+  [hidden] { display: none !important; }
+
+  /* Print: once a result is shown, print only the header, the result and the footer, on one page. */
+  @media print {
+    @page { size: auto; margin: 12mm; }
+    body { background: #fff; font-size: 10.5pt; line-height: 1.4; }
+    .wrap { max-width: none; padding: 0; }
+    header.site { padding: 0; }
+    h1 { font-size: 15pt; margin: 6px 0 10px; }
+    body.has-result form, body.has-result .lede, body.has-final .interim { display: none !important; }
+    #result, #income-result { margin: 0; }
+    .card { padding: 12px 14px; border: 1px solid #999; border-top-width: 4px; break-inside: avoid; }
+    .card h2 { font-size: 14pt; }
+    .card h3 { margin: 12px 0 4px; }
+    .figures { margin: 8px 0 2px; }
+    .figure .num { font-size: 17pt; }
+    .checklist li { padding: 2px 0 2px 24px; }
+    .checklist li::before { top: 5px; }
+    .card.isi .why { padding: 6px 10px; }
+    .card, .bar, .bar span, .card.isi .why { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    footer.site { padding: 12px 0 0; font-size: 8.5pt; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <svg class="logo" role="img" aria-label="MicroVPP" xmlns="http://www.w3.org/2000/svg" viewBox="0 820 2060 400" height="30"><polygon fill="#065F46" points="164,834 109,834 0,968 28,1003 95,1003 184,893 222,893 311,1003 378,1003 406,968 297,834 242,834 209,876 197,876"/><polygon fill="#065F46" points="311,1037 222,1147 184,1147 95,1037 28,1037 0,1072 109,1206 242,1206 297,1206 382,1102 406,1072 378,1037"/><polygon fill="#D4A017" points="149,1038 257,1038 206,974 201,974"/><path fill="#065F46" d="M586 955c-6,0 -10,3 -10,9l0 159 -43 0 0 -161c0,-32 21,-48 52,-48 29,0 47,14 54,42l28 121c1,4 3,7 9,7 5,0 7,-2 9,-7l27 -121c7,-28 24,-42 53,-42 31,0 52,16 52,48l0 161 -43 0 0 -159c0,-6 -4,-9 -10,-9 -5,0 -8,2 -9,8l-29 121c-6,27 -21,43 -51,43 -29,0 -45,-16 -51,-43l-29 -121c-1,-5 -4,-8 -9,-8zm268 5l40 0 0 163 -40 0 0 -163zm0 -18l0 -40 40 0 0 40 -40 0zm140 18l84 0 0 38 -81 0c-29,0 -35,18 -35,44 0,25 6,42 35,42l81 0 0 39 -84 0c-51,0 -72,-35 -72,-81 0,-47 21,-82 72,-82zm158 0l67 0 0 38 -58 0c-11,0 -16,5 -16,16l0 109 -39 0 0 -114c0,-32 12,-49 46,-49zm153 0l33 0c50,0 71,35 71,82 0,46 -21,81 -71,81l-33 0c-50,0 -71,-35 -71,-81 0,-47 21,-82 71,-82zm3 38c-28,0 -34,18 -34,44 0,25 6,42 34,42l27 0c28,0 34,-17 34,-42 0,-25 -6,-44 -34,-44l-27 0z"/><path fill="#D4A017" d="M1578 1098l72 -181 -48 0 -63 162c-2,2 -3,4 -6,4 -3,0 -5,-1 -6,-4l-61 -162 -47 0 68 181c8,21 24,29 46,29 21,0 37,-8 45,-29zm90 -138l107 0c14,0 23,8 23,22 0,15 -9,23 -23,23l-71 0c-25,0 -36,11 -36,36l0 82 43 0 0 -76c0,0 0,0 0,0 1,0 1,0 1,0l62 0c40,0 67,-26 67,-67 0,-41 -28,-63 -67,-63l-106 0 0 43zm199 -43l0 43 107 0c14,0 23,8 23,22 0,15 -9,23 -24,23l-71 0c-24,0 -35,11 -35,36l0 82 43 0 0 -76c0,0 0,0 0,0 0,0 1,0 1,0l61 0c41,0 68,-26 68,-67 0,-41 -28,-63 -68,-63l-105 0z"/></svg>
+  </header>
+
+  <main>
+    <h1>Can my home get a free battery?</h1>
+    <p class="lede">The <b>WNY Affordable Home Energy Program for Working Families</b> puts a home battery in your home at no cost to you. New York State pays an incentive toward it; MicroVPP pays the rest. Enter your address to see if your home qualifies. We check the state&rsquo;s Disadvantaged Community map and, if needed, the state&rsquo;s income limits. Nothing is stored or sent to us.</p>
+
+    <form id="check-form" novalidate aria-label="Check your address">
+      <div class="field">
+        <label for="address">Street address, city and ZIP</label>
+        <input id="address" name="address" type="text" autocomplete="street-address" placeholder="123 Main St, Buffalo, NY 14201" aria-describedby="address-hint address-error">
+        <span class="hint" id="address-hint">Used only to look up your census tract with the US Census Geocoder.</span>
+        <div class="error-text" id="address-error" hidden></div>
+      </div>
+
+
+      <button type="submit" id="submit">Check</button>
+      <p class="hint"><a href="#" id="income-only">Address not found, or prefer not to enter it? Check by income instead.</a></p>
+    </form>
+
+    <div id="result" aria-live="polite"></div>
+
+    <form id="income-form" novalidate hidden aria-labelledby="step2-title">
+      <h2 class="step-title" id="step2-title">Check by income</h2>
+
+      <div class="field fallback" id="county-field" hidden>
+        <label for="county">County</label>
+        <select id="county" name="county" aria-describedby="county-hint county-error">
+          <option value="">Choose your county</option>
+        </select>
+        <span class="hint" id="county-hint">The address service is unavailable. Choose your county to check the income path.</span>
+        <div class="error-text" id="county-error" hidden></div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="household">People in household</label>
+          <select id="household" name="household">
+            <option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="income">Household income (optional)</label>
+          <input id="income" name="income" type="text" inputmode="numeric" autocomplete="off" placeholder="$" aria-describedby="income-hint income-error">
+          <span class="hint" id="income-hint">Yearly, before taxes, everyone in the home.</span>
+          <div class="error-text" id="income-error" hidden></div>
+        </div>
+      </div>
+
+      <label class="check"><input type="checkbox" id="owner" name="owner"> <span>I own and live in this home</span></label>
+      <label class="check"><input type="checkbox" id="affordable" name="affordable"> <span>This is a 1&ndash;4 unit affordable-housing property</span></label>
+      <label class="check"><input type="checkbox" id="benefit" name="benefit"> <span>Someone in the household currently receives HEAP, SNAP, SSI, or another income-based benefit</span></label>
+
+      <button type="submit" id="submit-income">Check income eligibility</button>
+    </form>
+
+    <div id="income-result" aria-live="polite"></div>
+  </main>
+
+  <footer class="site">
+    <p>This is information, not an application or an offer. Eligibility rules and income limits are NYSERDA&rsquo;s; savings are estimates and depend on your usage. Sources: NYSERDA Residential &amp; Retail Energy Storage Program Manual; NYSERDA MWh Block Dashboard (read <span id="funds-as-of">2026-10-30</span>); NYS Climate Justice Working Group DAC designation; NYSERDA 2026 EmPower+ income guidelines; US Census Geocoder.</p>
+    <p>&copy; MicroVPP Inc.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===========================================================================
+  // FUNDS REMAINING: update weekly from the NYSERDA MWh Block Dashboard.
+  // This is the only place these figures live (the footer date reads from here too).
+  // ===========================================================================
+  var FUNDS_AS_OF = '2026-10-30';
+  var FUNDS = {
+    isi: { available: 8959500, total: 11250000 },  // Inclusive Storage Incentives (statewide)
+    ros: { available: 401450, total: 5000000 },   // Rest of State
+    con: { available: 5507425, total: 6250000 }    // Con Edison
+  };
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Program facts (NYSERDA, read 2026-09-22; rates re-verified on the block dashboard 2026-10-30). Do not edit without a new source.
+  // ---------------------------------------------------------------------------
+  var KWH_CAP = 25;
+  var BLOCKS = {
+    isi:  { name: 'Inclusive Storage Incentive (ISI)', label: 'Inclusive Storage Incentive block (statewide)', rate: 450, funds: FUNDS.isi },
+    con:  { name: 'Standard incentive: Con Edison',     label: 'Con Edison block',     rate: 250, funds: FUNDS.con },
+    ros:  { name: 'Standard incentive: Rest of State',  label: 'Rest-of-State block',  rate: 200, funds: FUNDS.ros, next: { rate: 175, total: 6300000 } }  // Block 2: $175/kWh, $6.3M, not yet open (2026-10-30)
+  };
+  var REST_OF_STATE_UTILITIES = ['national-grid', 'nyseg', 'rge', 'central-hudson', 'orange-rockland'];
+
+  // NYSERDA 2026 EmPower+ "Moderate Income" caps (80% AMI/SMI), household size 1-10.
+  // Extracted from the dataModerate object on nyserda.ny.gov EmPower+ Eligibility Guidelines.
+  var INCOME_CAPS = {
+    "Albany": [65050, 74350, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Allegany": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Bronx": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Broome": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Cattaraugus": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Cayuga": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Chautauqua": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Chemung": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Chenango": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Clinton": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Columbia": [63150, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Cortland": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Delaware": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Dutchess": [68900, 78750, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Erie": [56600, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Essex": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Franklin": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Fulton": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Genesee": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Greene": [56200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Hamilton": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Herkimer": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Jefferson": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Kings": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Lewis": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Livingston": [58200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Madison": [58000, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Monroe": [58200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Montgomery": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Nassau": [92350, 105550, 118750, 131900, 142500, 153050, 163600, 174150, 184660, 195212],
+    "New York": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Niagara": [56600, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Oneida": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Onondaga": [58000, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Ontario": [58200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Orange": [68900, 78750, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Orleans": [58200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Oswego": [58000, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Otsego": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Putnam": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Queens": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Rensselaer": [65050, 74350, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Richmond": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Rockland": [90750, 103700, 116650, 129600, 140000, 150350, 160750, 171100, 181440, 191808],
+    "Saratoga": [65050, 74350, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Schenectady": [65050, 74350, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Schoharie": [65050, 74350, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Schuyler": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Seneca": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "St. Lawrence": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Steuben": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Suffolk": [92350, 105550, 118750, 131900, 142500, 153050, 163600, 174150, 184660, 195212],
+    "Sullivan": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Tioga": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Tompkins": [67400, 77000, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Ulster": [67100, 76700, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Warren": [56000, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Washington": [56000, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Wayne": [58200, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Westchester": [95200, 108800, 122400, 136000, 146900, 157800, 168650, 179550, 190400, 201280],
+    "Wyoming": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904],
+    "Yates": [55568, 72672, 89776, 106880, 123984, 141088, 144288, 147488, 150704, 153904]
+  };
+
+  // NYS Climate Justice Working Group Disadvantaged Community tracts (2020 tracts, 1,736).
+  // Format: "SSCCC:tttttttttttt...;" = 5-digit state+county, then 6-digit tract codes.
+  var DAC_DATA = '36001:000100000200000300000501000600000700000800001100002000002100002200002300002500002600012700012800012900013100013200013300013400013602014301;36003:940200950500950600;36005:000100000200000400001600001900002000002300002400002500002701002702002800003100003300003500003800003900004001004100004200004300004400004600004800005001005002005100005200005300005400005600005902006000006100006200006300006400006500006700006800006900007000007100007200007300007400007500007600007700007800007900008300008400008500008600008700008900009000009200009300009600009800011502011700011800011900012101012102012300012500012701012901013100013200013300013500013800014100014300014400014500014701014702014900015100015200015300015500015700015800015900016000016100016200016400016500016600016700016900017300017500017701017702017901017902018101018102018301018302018400018500018900019300019400019500019700019900020000020100020200020400020501020502020601020900021001021100021200021301021302021501021502021601021602021700021800021900022000022101022102022200022300022401022403022404022500022701022702022703022800022901022902023000023100023200023301023302023501023502023600023702023703023704023800023900024000024100024300024400024501024502024700025100025200025300025500025600025700026300026400026500026602026701026702026900027300027700027900028300028400028700028900029600030000030200031000031900032400032800033000033201033202033600033800034000034200034400034800035600035900036000036100036300036501036502036700036800036901036902037000037100037200037300037400037504037600037800037900038000038100038200038301038302038500038600038700038800038900039000039100039200039300039400039500039600039901039902040100040302040303040304040501040502040600040701040702040800041100041300041400041500041800041900042000042100042200042300042400042500042901042902043000043100043400043500044200045600045800046000046201046202048400051600;36007:000100000200000300000400000500000600000700000900001100001200001300001400001800012600012800013100013500013600013700013900014000;36009:940000940200940300960800961700;36011:040300041300041400041800042100;36013:030100030200030300030500035400035500035600035700036000036300037600;36015:000100000200000600000700000900001000010500010800;36017:970400;36019:102000102100102200;36021:001100001200001300;36023:970500970600970900;36025:970400;36027:010000040003050203060100060201060202060400070101070201070301070401140101140200140300140500140801150003190203190301190401210101210201220100220201220300220700220801220901221100300000410000610000640002;36029:000110000200000500001000001100001402001500001600001700001900002300002400002502002702002800002900003000003100003301003302003400003500003600003700003800003901004001004100004200004300004401004402004700005000005202005500005600005700005801005802005900006100006701006901006902007000007101007102007202008300008400010102010202010700010902011000011300011400012300012400016300016400016500016600016700016800017000017100017200017400017501940000940100;36033:940000950200;36035:970700970800971200;36037:940100950300950700951000;36039:080700080900081000081102;36043:010400010501011100;36045:061300061400061500062100;36047:000200001300001500001800002000002200002300002901004700005300005900006800007100007200007400007600007700007800008000008200008400008500008800009000009800010100011200011700011900012200012700014300014500014700017600017900018501018700019100019300019900021100021700021900022100023300023500024100024300024700025100025300025500025600025700025901025902026100026300026500026700026900027100027300027700027900028100028300028501028502028600028700028900029100029200029300029400029500029900030000030100030300030400030600030700030800030900031100031300031400031500032600032700032800033000033700033900034000034100034200034300034500034700034800034900035100035200035300035500035700035900036002036100036200036300036400036501036502036600036700036900037100037300037401037402037500037700037900038100038200038300038500038600038700038900039100039300039500039700039900040100040200040300040500040900041100041300041500041700041900042100042300042500042700042900043100043300043500043700043900044100044300044500044700044900045300048000048100048500048600048900049100049300050100050500050700050801050900051001051100051300051602052300052500052700052900053100053300053400053500053700053900054300054500054700054900055100055700056100056300056500057200057300057500057900058900059000059200059300060600060800061003061004062200062600078800079000079200079400080800082200082400082600086200086600086800087000087800088200088400088600089000089200089400089600089800090000090200090600090800091000091200091600091800092000092200092400092800094402098200101200102200103400105801105804107000107800109800110400110600111000111600111800112000112200112400112600112800113000113200113400114201114202114400114600115000115200115600115800116000116200116400116600116800117000117201117202117400117601117602117800118201118202118400118600118800119000119200119400119600119800120000120200120800121000121400122000123700;36051:030900;36053:030101030103030300030600;36055:000200000700001300001500001800001900002000002100002200002300002400002700003000003200003300003805003900004000004100004602004701004702004800004900005000005100005200005300005400005500005600005700005800005900006200006300006400006500006600006700006800006900007000007100007500007700007900008000008100008200008301008400008500008600008701008702008800009200009301009302009400009500009601009602009603009604010901010902011603013001013104013401013604013902014104014202014301014302014602015102015304;36057:070200070300070400070600070700070800070900072200072300072400072500072700;36059:304100304202304203304204404902406701406702406801406802406900407000407101407201407203407204407301407302407401407402407501407502407900410400410500410800410900411000411100412400413002413900414001414002414201414202414301414303414304414400414502416500517101517200522000;36061:000201000202000600000800001001001002001200001402001600001800002000002201002202002400002500002601002602002800002900003002003601003800006200008300009600009700009900010900011700011900012100012900013500015100015200015602016200016400016600016800017000017200017401017402017800018000018200018400018600018800018900019200019300019400019500019600019702019800019900020000020102020600020800020901021000021100021200021303021400021500021600021800021900022000022200022301022302022400022500022600022700022800022900023000023100023200023300023400023501023502023600023700023802023900024000024100024200024301024302024500024700024900025100025300025500025900026100026300026500026700026900027100027700027900028500028700029100029300029900030900;36063:020200020300020400020500020600020700020900021000021100021200021300021400021700022000022200022300022500022601022602022901023001023100023200023401023500023600023700023800024002024102024202024502940001940100;36065:020102020300020802020803020900021000021101021102021103021201021302021401021402021500021601021900022000022500026300026400;36067:000100000200000400000501000600000700000800001000001400001500001600001701001702001800001900002000002101002300002400002700003000003200003400003500003601003602003800003900004000004200004301005100005200005300005400005500005700005800005900006000006101006102011700012000012800012900013600013701014000014300014400014600016200940000;36069:050301050302051700051800;36071:000100000200000300000400000501000502000600001100001200001500001600002100002200002300010102010200010300010400010500010600010700010801010802011000011101011200011300011601011602011702011801011900012100012601012602012700012800013800014102014301015100015200;36073:040300040500040600040700040802401200;36075:020301021101021102021104021200021601021602021603021604021605;36077:591100;36081:000200000400000600000700001800001900002200002500002800003100003200003300003400003800003900004001004002004200004300004401004500004700005100005300005500005700006202006900007100007900008100008300008500008700009100009400009500009800010200010300010500010600010800011200011400011600011800011900012000012200012301012400012602014100014201014202014300014400014500014800015200015400015600015700015801015900016100016300016600016800017000017400017600017800017900018000018101018200018401018402018600018900019200019400019800019900020200020400020500020600020800021200021400023500023800024000025302025400026000026100026300026400026600026700026902027300027500027800028800029700030902031700032700032900033900034700035100035300035700036100036300036500036700037100037300037500037700037900038100039900040100040300040500040700040900041100041300041400041500042700043701043702043900044000044301044302044400044601044602045500046000046100046200046300046500046700046900047000048100049900053100053500054500055100055300055500057700057900061301063500065600066400068300069400079000081400081800084000084500084601084602084900086400086500086900087100088901090700091900092500092900093800093900094201094202094203094500094700095400097202097203097204099200099802101001103201103202116300116700120500122702;36083:040100040200040300040400040500040700040800040900041000041100051500051600;36085:000300000600000700000800000900001100001700002001002100002700002900004000006400007500007700008100010500011202011401012500013301013302014100017300020700021300022300023100023900024700029102030301030302031901031902032300;36087:010200010502010601010602010701010702010703010902011102011301011800011902012202012300012401012402013100013200;36089:490100490300491400491500491600491700492900;36093:020200020300020700020800020900021001021002021200021400021500021600021700033004033200033500;36099:950200950300950400;36101:961100961200961300;36103:111100122403122406122501123002123201123202123301123302123701123702145603145604145605145703145804145902146003146203146300146403146404147300158705158710158900159000159102159103159106159204159408159505159508159511169704169800169901170101190401190502190705201100;36105:950500950700950800950900951000951100951500951600951800951900;36107:020500020703;36109:000800001000;36111:950200950300951300951400951500951600951700951800952000952100952400952500952700953400953500953600953700953800954100954500954600954800954900;36113:070200070500;36115:080100;36117:020800020900021100021200021400021502021600021700021800;36119:000101000103000201000202000203000300000401000402000500000600000702000801000802000900001000001101001102001200001301001302001303001401001402001403001503001504001505001600001700001800002106002107002203002300002401002402002403002404002405002600002700002800002900003000003100003200003300003400003500003600003700003800003900004000004100004300004500005701005702005800005901005902006000006100006200006300006400006500007300007401007800007900008000008403008800008902009000009100009200009300009400011200011500011600012900013301013304013400013600014000014100014200014300014400014500014604014605014701981000982000984000;36123:150100';
+
+  var DAC_TRACTS = (function () {
+    var set = new Set();
+    DAC_DATA.split(';').forEach(function (group) {
+      var parts = group.split(':');
+      for (var i = 0; i < parts[1].length; i += 6) set.add(parts[0] + parts[1].slice(i, i + 6));
+    });
+    return set;
+  })();
+
+  var GEOCODER = 'https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress';
+  var GEOCODER_TIMEOUT_MS = 15000;
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  var $ = function (id) { return document.getElementById(id); };
+  var usd = function (n) { return '$' + Math.round(n).toLocaleString('en-US'); };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function householdLabel(n) { return n + '-person household'; }
+
+  // The Census Geocoder does not send CORS headers, so fetch() is blocked in
+  // browsers. It supports JSONP (format=jsonp&callback=...), which we use here.
+  function geocode(address) {
+    return new Promise(function (resolve, reject) {
+      var callbackName = 'isiGeocode_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      var script = document.createElement('script');
+      var done = false;
+      var timer = setTimeout(function () { finish(new Error('timeout')); }, GEOCODER_TIMEOUT_MS);
+
+      function finish(err, data) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        window[callbackName] = function () {}; // swallow a late response
+        script.remove();
+        if (err) reject(err); else resolve(data);
+      }
+
+      window[callbackName] = function (data) { finish(null, data); };
+      script.onerror = function () { finish(new Error('network')); };
+      script.src = GEOCODER + '?address=' + encodeURIComponent(address) +
+        '&benchmark=Public_AR_Current&vintage=Current_Current&format=jsonp&callback=' + callbackName;
+      document.head.appendChild(script);
+    });
+  }
+
+  // Reduce a geocoder response to what we need, or null if there is no match.
+  function readMatch(data) {
+    if (!data || !data.result || !Array.isArray(data.result.addressMatches)) {
+      throw new Error('unexpected response');
+    }
+    var match = data.result.addressMatches[0];
+    if (!match) return null;
+    var geo = match.geographies || {};
+    var tract = (geo['Census Tracts'] || [])[0];
+    var county = (geo['Counties'] || [])[0];
+    if (!tract || !county) throw new Error('unexpected response');
+    return {
+      matchedAddress: match.matchedAddress,
+      state: tract.STATE,
+      tract: tract.GEOID,
+      county: String(county.NAME || '').replace(/\s+County$/, '')
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Eligibility
+  // ---------------------------------------------------------------------------
+  var BENEFIT_WHY = 'Your household takes part in an income-based benefit program — NYSERDA accepts this as proof of income eligibility (verification still required).';
+  var IEV_LINE = 'NYSERDA verifies income through its Income Eligibility Verification (IEV) application; a HEAP/SNAP award letter also works.';
+
+  // Step 1 result for a DAC tract: ISI by address. No income questions are asked.
+  function decideByAddress(place) {
+    return { kind: 'isi', basis: 'Qualifies by address',
+      why: 'Your census tract ' + place.tract + ' is a state-designated Disadvantaged Community.', extra: [] };
+  }
+
+  // Step 2 result for an address that is not DAC (place.dac === false) or could not be checked (null).
+  function decideByIncome(input, place, utility) {
+    var cap = INCOME_CAPS[place.county] ? INCOME_CAPS[place.county][input.household - 1] : null;
+    var capText = cap ? usd(cap) + ' for a ' + householdLabel(input.household) + ' in ' + place.county + ' County' : null;
+    var incomeBelow = input.income !== null && cap !== null && input.income < cap;
+
+    if (incomeBelow && input.owner) {
+      return { kind: 'isi', basis: 'Likely qualifies by income', incomePath: true,
+        why: 'Your income is below ' + capText + ' — NYSERDA will verify.',
+        extra: ['You own and live in the home, and NYSERDA verifies your household income'] };
+    }
+    if (input.benefit && input.owner) {
+      return { kind: 'isi', basis: 'Likely qualifies by income (benefit program)', incomePath: true,
+        why: BENEFIT_WHY,
+        extra: ['You own and live in the home, and NYSERDA verifies the household’s benefit enrollment'] };
+    }
+    if (input.affordable) {
+      return { kind: 'isi', basis: 'Likely qualifies as affordable housing',
+        why: 'You told us this is a 1–4 unit affordable-housing property — NYSERDA will verify.',
+        extra: ['The property is a 1–4 unit affordable-housing property'] };
+    }
+
+    // Standard tier. Explain why the $450 tier did not apply.
+    var notes = [];
+    if (place.dac === false) notes.push('Your census tract ' + place.tract + ' is not a designated Disadvantaged Community.');
+    else notes.push('We did not check your address against the Disadvantaged Community map. If your home is in a Disadvantaged Community, it may qualify by address; enter it above to check.');
+
+    if (incomeBelow && !input.owner) {
+      notes.push('Your income is below ' + capText + ', but the income path requires that you own and live in the home.');
+    } else if (input.benefit && !input.owner) {
+      notes.push('Your household takes part in an income-based benefit program, but the income path requires that you own and live in the home.');
+    } else if (cap === null) {
+      notes.push('We could not find NYSERDA income limits for this county.');
+    } else if (input.income === null) {
+      notes.push('If your household income is below ' + capText + ' and you own and live in the home, you may qualify for the free program. Add your income above to check.');
+    } else {
+      notes.push('Your income is at or above the limit of ' + capText + '.');
+    }
+
+    var standard = utility === 'con-edison' ? 'con' :
+      REST_OF_STATE_UTILITIES.indexOf(utility) >= 0 ? 'ros' : 'unknown';
+    return { kind: standard, notes: notes };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------------
+  var REQUIREMENTS = [
+    'Installed by a NYSERDA participating contractor',
+    'Battery listed to UL 9540',
+    'Grid-connected behind your meter, with a utility interconnection agreement',
+    '10-year system warranty',
+    'After installation, the battery enrolls in your utility’s battery demand-response program (National Grid: ConnectedSolutions; NYSEG/RG&E and Orange & Rockland have their own)'
+  ];
+  var NEXT_STEP = 'A NYSERDA participating contractor applies for you and receives the incentive after your utility grants permission to operate; homeowners cannot apply directly.';
+
+  function fundHtml(block) {
+    var f = block.funds;
+    var pct = (f.available / f.total * 100).toFixed(1);
+    return '<div class="fund"><p>' + esc(block.label) + ': ' + usd(f.available) + ' of ' + usd(f.total) +
+      ' remaining as of ' + FUNDS_AS_OF + '</p><div class="bar" aria-hidden="true"><span style="width:' + pct + '%"></span></div>' +
+      (block.next ? '<p class="hint">This block is nearly used up. The next block (' + usd(block.next.total) + ', not yet open) pays ' + usd(block.next.rate) + ' per kWh, up to ' + usd(block.next.rate * KWH_CAP) + '.</p>' : '') + '</div>';
+  }
+
+  function figuresHtml(block) {
+    return '<div class="figures">' +
+      '<div class="figure"><span class="num">' + usd(block.rate) + '</span><span class="cap">per kWh installed</span></div>' +
+      '<div class="figure"><span class="num">' + usd(block.rate * KWH_CAP) + '</span><span class="cap">maximum, at the ' + KWH_CAP + ' kWh cap</span></div>' +
+      '</div>';
+  }
+
+  function checklistHtml(extra) {
+    var items = REQUIREMENTS.concat(extra || []);
+    return '<h3>What has to be true</h3><ul class="checklist">' +
+      items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') +
+      '<li>The battery can be standalone or paired with solar</li></ul>';
+  }
+
+  function matchedHtml(place) {
+    if (!place.matchedAddress) return '<p class="matched">County chosen: ' + esc(place.county) + ' County. Address not checked.</p>';
+    return '<p class="matched">Matched address: ' + esc(place.matchedAddress) + ' &middot; ' + esc(place.county) +
+      ' County &middot; census tract ' + esc(place.tract) + '</p>';
+  }
+
+  var PROGRAM_COUNTIES = ['Niagara', 'Erie'];
+  var CONTACT_HTML = '<p class="next">Questions, or ready to talk? Email <b>support@microvpp.com</b> or call <b>(716) 218-0299</b>. We&rsquo;ll look at your home with you and run the savings numbers before you decide.</p>';
+  var currentUtility = '';
+
+  function listHtml(items) {
+    return '<ul class="checklist">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function tierCard(decision, place) {
+    var html;
+    var areaNote = (place.county && PROGRAM_COUNTIES.indexOf(place.county) < 0) ?
+      '<p class="verify">We are starting in Niagara and Erie counties. Your home is in ' + esc(place.county) + ' County, outside our first area. Contact us and we&rsquo;ll let you know when we reach you.</p>' : '';
+    var utilityNote = '';
+    if (decision.kind === 'isi') {
+      var steps = decision.incomePath ?
+        ['Confirm your income with NYSERDA, the state agency, not with us: a short online form with recent pay stubs or last year\u2019s tax return. If your family gets HEAP or SNAP, the approval letter is all you need. We\u2019ll send you the link and help you fill it in.'] : [];
+      steps = steps.concat([
+        'Let us look at your home once, to pick the spot for the battery',
+        'Be home on installation day',
+        'Call National Grid once to choose the time-of-use rate, which is what makes the savings possible. We\u2019ll tell you exactly what to ask for.'
+      ]);
+      html = '<div class="card isi"><p class="eyebrow">' + esc(decision.basis) + '</p>' +
+        '<h2 tabindex="-1">Good news: your home looks eligible for a free battery</h2>' +
+        '<h3>Why</h3><p class="why">' + esc(decision.why) + '</p>' +
+        (decision.incomePath ? '' : '<p class="verify">Income doesn&rsquo;t matter on this path. The program is for families who own and live in their home and get their electricity from National Grid.</p>') +
+        matchedHtml(place) + areaNote + utilityNote +
+        '<h3>What you get</h3>' + listHtml([
+          'A home battery installed at no cost to you',
+          'No monthly fee, no loan, no credit check',
+          'For most families, savings of one to two thousand dollars a year on the electric bill',
+          'Repairs on us for ten years; stop any time and we take the battery away'
+        ]) +
+        '<h3>What you do</h3>' + listHtml(steps) +
+        '<h3>Why now</h3>' + fundHtml(BLOCKS.isi) +
+        '<p class="hint">The state incentive comes from a fixed pot, first come, first served across New York. When it runs out, the free program ends with it.</p>' +
+        '<p class="hint">Already have solar panels with net metering? Then this program probably isn&rsquo;t for you; a battery wouldn&rsquo;t cut your bill much.</p>';
+    } else {
+      html = '<div class="card"><p class="eyebrow">Not eligible for the free program</p>' +
+        '<h2 tabindex="-1">Your home doesn&rsquo;t qualify for the free battery</h2>' +
+        '<h3>Why</h3>' + notesHtml(decision.notes) + matchedHtml(place) + utilityNote +
+        '<p class="next">A battery could still get New York&rsquo;s standard incentive (' + usd(BLOCKS.ros.rate) + ' per kWh in National Grid territory), but it would not be free. If you&rsquo;d like to talk about that, contact us.</p>';
+    }
+    return html + '<h3>Next step</h3>' + CONTACT_HTML + '</div>';
+  }
+
+  function notesHtml(notes) {
+    return '<ul class="notes">' + notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+  }
+
+  function messageCard(tone, eyebrow, title, body, extraHtml) {
+    return '<div class="card ' + tone + '"><p class="eyebrow">' + esc(eyebrow) + '</p><h2 tabindex="-1">' + esc(title) +
+      '</h2><p class="next">' + esc(body) + '</p>' + (extraHtml || '') + '</div>';
+  }
+
+  function syncPrintState() {
+    document.body.classList.toggle('has-result', !!($('result').innerHTML || $('income-result').innerHTML));
+    document.body.classList.toggle('has-final', !!$('income-result').innerHTML);
+  }
+
+  function show(boxId, html, focusHeading) {
+    var box = $(boxId);
+    box.innerHTML = html;
+    syncPrintState();
+    var heading = box.querySelector('h2');
+    if (heading && focusHeading !== false) {
+      heading.focus({ preventScroll: true });
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Forms: Step 1 (address + utility) and Step 2 (income questions)
+  // ---------------------------------------------------------------------------
+  var form = $('check-form');
+  var incomeForm = $('income-form');
+  var button = $('submit');
+  var countySelect = $('county');
+  var requestId = 0;
+  // Last Step 1 outcome that led to Step 2: { utility, place } (place is null when the geocoder failed).
+  var cached = null;
+
+  $('funds-as-of').textContent = FUNDS_AS_OF;
+
+  Object.keys(INCOME_CAPS).sort().forEach(function (name) {
+    var opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    countySelect.appendChild(opt);
+  });
+
+  function setError(field, message) {
+    var el = $(field + '-error');
+    el.textContent = message || '';
+    el.hidden = !message;
+    if (message) $(field).setAttribute('aria-invalid', 'true'); else $(field).removeAttribute('aria-invalid');
+  }
+
+  function parseIncome(raw) {
+    var cleaned = raw.replace(/[$,\s]/g, '');
+    if (cleaned === '') return null;
+    if (!/^\d+(\.\d+)?$/.test(cleaned)) return NaN;
+    return Number(cleaned);
+  }
+
+  function busy(on) {
+    button.disabled = on;
+    button.textContent = on ? 'Checking…' : 'Check';
+  }
+
+  // Hide Step 2 and clear its result (a new Step 1 check or an edited address starts over).
+  function resetStep2() {
+    cached = null;
+    incomeForm.hidden = true;
+    $('county-field').hidden = true;
+    ['county', 'income'].forEach(function (f) { setError(f, ''); });
+    $('income-result').innerHTML = '';
+    syncPrintState();
+  }
+
+  function openStep2(utility, place) {
+    cached = { utility: utility, place: place };
+    $('county-field').hidden = !!place;
+    incomeForm.hidden = false;
+  }
+
+  // Editing Step 1 after a check makes the shown result stale: start over.
+  function onStep1Edit() {
+    if (!cached && !$('result').innerHTML) return;
+    ++requestId;
+    busy(false);
+    resetStep2();
+    $('result').innerHTML = '';
+    syncPrintState();
+  }
+  $('address').addEventListener('input', onStep1Edit);
+  $('income-only').addEventListener('click', function (event) {
+    event.preventDefault();
+    ++requestId;
+    busy(false);
+    resetStep2();
+    openStep2('national-grid', null);
+    show('result', messageCard('notice interim', 'No address needed', 'Answer a few questions',
+      'Choose your county and answer the questions below. If your home is in a Disadvantaged Community, it can also qualify by address, whatever your income.'), false);
+    countySelect.focus();
+  });
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var address = $('address').value.trim();
+    var utility = 'national-grid';
+
+    setError('address', '');
+    var first = null;
+    if (!address) { setError('address', 'Enter your street address, city and ZIP.'); first = 'address'; }
+    if (first) { $(first).focus(); return; }
+
+    resetStep2();
+
+
+    var thisRequest = ++requestId;
+    busy(true);
+    geocode(address).then(function (data) {
+      if (thisRequest !== requestId) return;
+      var match = readMatch(data);
+      if (!match) {
+        openStep2(utility, null);
+        show('result', messageCard('problem', 'Address not found', 'We couldn’t find that address',
+          'Check the spelling and the ZIP code, and include the street number, city and ZIP, for example: 123 Main St, Buffalo, NY 14201. Or check by income below: choose your county and answer the questions.'));
+        return;
+      }
+      if (match.state !== '36') {
+        show('result', messageCard('problem', 'Outside New York', 'That address is not in New York State',
+          'This program is for New York homes only. Matched address: ' + match.matchedAddress + '.'));
+        return;
+      }
+      match.dac = DAC_TRACTS.has(match.tract);
+      if (match.dac) {
+        // DAC tract: full ISI result now. No income questions.
+        show('result', tierCard(decideByAddress(match), match));
+        return;
+      }
+      openStep2(utility, match);
+      show('result', messageCard('notice interim', 'Address checked', 'Your address is not in a designated Disadvantaged Community.',
+        'You may still qualify by income. Answer the questions below.', matchedHtml(match)));
+    }).catch(function (err) {
+      if (thisRequest !== requestId) return;
+      if (window.console) console.error('Address lookup failed:', err);
+      openStep2(utility, null);
+      show('result', messageCard('notice interim', 'Address service unavailable', 'We couldn’t reach the US Census address service',
+        'So we can’t check the Disadvantaged Community map right now. You can still check the income path: choose your county below and answer the income questions.'), false);
+      countySelect.focus();
+    }).then(function () {
+      if (thisRequest === requestId) busy(false);
+    });
+  });
+
+  incomeForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!cached) return;
+    var input = {
+      household: Number($('household').value),
+      income: parseIncome($('income').value),
+      owner: $('owner').checked,
+      affordable: $('affordable').checked,
+      benefit: $('benefit').checked
+    };
+
+    ['county', 'income'].forEach(function (f) { setError(f, ''); });
+    var first = null;
+    if (!cached.place && !countySelect.value) { setError('county', 'Choose your county.'); first = 'county'; }
+    if (Number.isNaN(input.income)) { setError('income', 'Enter a whole dollar amount, like 72510, or leave it blank.'); first = first || 'income'; }
+    if (first) { $(first).focus(); return; }
+
+    // Uses the cached geocode; no new lookup.
+    var place = cached.place || { county: countySelect.value, dac: null };
+    show('income-result', tierCard(decideByIncome(input, place, cached.utility), place));
+  });
+})();
+</script>
+</body>
+</html>
