@@ -9,6 +9,7 @@ Disallow: /diy-registration-step1.html
 Disallow: /diy-registration-step2.html
 Disallow: /diy-registration-step3.html
 Disallow: /subscribe.html
+Disallow: /set-password.html
 
 # Allow major AI crawlers (helps brand surfacing in answer engines)
 User-agent: GPTBot
